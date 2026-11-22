@@ -310,6 +310,7 @@ export const eventTypes = [
   'member.joined',
   'member.left',
   'conversation.updated',
+  'history.imported',
 ] as const;
 
 // Every change in a conversation gets the next seq. This table is both the outbox (rows with no
@@ -451,3 +452,60 @@ export const emailUsage = sqliteTable('email_usage', {
   day: text('day').primaryKey(), // YYYY-MM-DD (UTC)
   sent: integer('sent').notNull().default(0),
 });
+
+/* ---------------------------------------------------------------------------------------------
+ * Importing history from a Slack export. The browser unpacks the export and sends it in small
+ * batches; these tables remember which Slack ids became which Huddle ids within one import.
+ * ------------------------------------------------------------------------------------------- */
+
+export const importSession = sqliteTable('import_session', {
+  id: text('id').primaryKey(),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => user.id),
+  status: text('status', { enum: ['open', 'finished'] })
+    .notNull()
+    .default('open'),
+  createdAt: createdAt(),
+  finishedAt: timestamp('finished_at'),
+});
+
+export const importUserMap = sqliteTable(
+  'import_user_map',
+  {
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => importSession.id),
+    slackId: text('slack_id').notNull(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.slackId] })],
+);
+
+export const importConversationMap = sqliteTable(
+  'import_conversation_map',
+  {
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => importSession.id),
+    slackId: text('slack_id').notNull(),
+    conversationId: text('conversation_id')
+      .notNull()
+      .references(() => conversation.id),
+  },
+  (t) => [primaryKey({ columns: [t.sessionId, t.slackId] })],
+);
+
+// Per-day counters for work with a daily budget other than email (e.g. imported messages, which
+// cost several database writes each against the free plan's 100,000 writes a day).
+export const dailyCounter = sqliteTable(
+  'daily_counter',
+  {
+    day: text('day').notNull(),
+    kind: text('kind').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (t) => [primaryKey({ columns: [t.day, t.kind] })],
+);

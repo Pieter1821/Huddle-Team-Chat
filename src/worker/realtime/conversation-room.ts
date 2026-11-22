@@ -22,6 +22,8 @@ const TYPING_THROTTLE_MS = 3000;
 const MAX_CLIENT_FRAME = 1024;
 const REPLAY_LIMIT = 500;
 const MAX_DISTINCT_REACTIONS = 50;
+/** Keeps one import batch well inside the per-request query limits. */
+export const MAX_IMPORT_REACTIONS = 20;
 
 /** Ephemeral frames that are never stored and carry no seq. */
 export type RoomSignal =
@@ -73,6 +75,20 @@ async function attempt<T>(work: () => Promise<T>): Promise<RoomResult<T>> {
     throw err;
   }
 }
+
+/** A historical message from an import, in Huddle format (already converted from Slack). */
+export type ImportedMessage = {
+  /** Stable per source message (e.g. slack-<ts>), so re-running an import skips it. */
+  clientMsgId: string;
+  authorId: string | null;
+  body: string;
+  /** Epoch milliseconds of the original message. */
+  createdAt: number;
+  parentClientMsgId?: string | null | undefined;
+  reactions?: { emoji: string; userIds: string[] }[] | undefined;
+};
+
+export type ImportResult = { imported: number; skipped: number };
 
 export type PostInput = {
   conversationId: string;
@@ -534,6 +550,127 @@ export class ConversationRoom extends DurableObject<Env> {
           ],
         }));
         return { changed: true };
+      }),
+    );
+  }
+
+  /**
+   * Imports a batch of historical messages (oldest first) in ONE atomic D1 batch. Each message takes
+   * the next seq; instead of an event per message (which would double the database writes against
+   * the free plan's daily limit), one 'history.imported' event covering the range is recorded, so a
+   * reconnecting client knows why those seqs have no individual events and reloads history.
+   * Messages already imported (same clientMsgId in this conversation) are skipped, so an import can
+   * be re-run. Imported history creates no notifications.
+   */
+  async importMessages(
+    conversationId: string,
+    messages: ImportedMessage[],
+  ): Promise<RoomResult<ImportResult>> {
+    return this.serialize(() =>
+      attempt(async () => {
+        const keys = messages.map((m) => m.clientMsgId);
+        const existing = await this.db
+          .select({ clientMsgId: message.clientMsgId })
+          .from(message)
+          .where(and(eq(message.conversationId, conversationId), inArray(message.clientMsgId, keys)));
+        const done = new Set(existing.map((e) => e.clientMsgId));
+        const fresh = messages.filter((m) => !done.has(m.clientMsgId));
+        if (!fresh.length) return { imported: 0, skipped: messages.length };
+
+        // Thread parents: earlier in this batch, or imported in an earlier batch.
+        const ids = new Map(fresh.map((m) => [m.clientMsgId, newId()] as const));
+        const parentKeys = [
+          ...new Set(
+            fresh.map((m) => m.parentClientMsgId).filter((k): k is string => Boolean(k) && !ids.has(k!)),
+          ),
+        ];
+        const parents = parentKeys.length
+          ? await this.db
+              .select({ id: message.id, clientMsgId: message.clientMsgId })
+              .from(message)
+              .where(
+                and(eq(message.conversationId, conversationId), inArray(message.clientMsgId, parentKeys)),
+              )
+          : [];
+        const known = new Map([...parents.map((p) => [p.clientMsgId!, p.id] as const), ...ids]);
+
+        const first = (await this.currentSeq(conversationId)) + 1;
+        const last = first + fresh.length - 1;
+        const eventSeq = last + 1;
+        const at = new Date();
+        const rows = fresh.map((m, i) => ({
+          id: ids.get(m.clientMsgId)!,
+          conversationId,
+          seq: first + i,
+          authorId: m.authorId,
+          webhookId: null,
+          clientMsgId: m.clientMsgId,
+          // A reply whose parent was never imported becomes a normal message rather than an orphan.
+          parentId:
+            (m.parentClientMsgId &&
+              m.parentClientMsgId !== m.clientMsgId &&
+              known.get(m.parentClientMsgId)) ||
+            null,
+          body: m.body,
+          alsoInChannel: false,
+          replyCount: 0,
+          lastReplyAt: null,
+          editedAt: null,
+          deletedAt: null,
+          createdAt: new Date(m.createdAt),
+        }));
+        const seen = new Set<string>();
+        const reactions = fresh.flatMap((m) =>
+          (m.reactions ?? []).flatMap((r) =>
+            r.userIds
+              .map((userId) => ({
+                messageId: ids.get(m.clientMsgId)!,
+                userId,
+                emoji: r.emoji,
+                createdAt: new Date(m.createdAt),
+              }))
+              .filter((row) => {
+                const key = `${row.messageId}|${row.userId}|${row.emoji}`;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+              }),
+          ),
+        );
+        if (reactions.length > MAX_IMPORT_REACTIONS) {
+          throw new AppError(
+            413,
+            'batch_too_large',
+            `Send at most ${MAX_IMPORT_REACTIONS} reactions per batch.`,
+          );
+        }
+
+        const event = {
+          type: 'history.imported' as const,
+          conversationId,
+          seq: eventSeq,
+          at: at.toISOString(),
+          data: { fromSeq: first, toSeq: last, count: fresh.length },
+        };
+        try {
+          await this.db.batch([
+            this.db
+              .insert(conversationEvent)
+              .values({ conversationId, seq: eventSeq, type: event.type, payload: event, createdAt: at }),
+            this.db
+              .update(conversation)
+              .set({ lastSeq: eventSeq })
+              .where(eq(conversation.id, conversationId)),
+            ...rows.map((row) => this.db.insert(message).values(row)),
+            ...(reactions.length ? [this.db.insert(reaction).values(reactions).onConflictDoNothing()] : []),
+          ]);
+        } catch (err) {
+          this.lastSeq = null;
+          throw err;
+        }
+        this.lastSeq = eventSeq;
+        await this.publish(event);
+        return { imported: fresh.length, skipped: messages.length - fresh.length };
       }),
     );
   }

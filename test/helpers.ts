@@ -124,6 +124,10 @@ export async function addMember(
 export async function resetDb() {
   const tables = [
     'audit_log',
+    'daily_counter',
+    'import_conversation_map',
+    'import_user_map',
+    'import_session',
     'email_usage',
     'rate_limit',
     'reaction',

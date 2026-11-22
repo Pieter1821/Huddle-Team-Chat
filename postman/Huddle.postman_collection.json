@@ -2127,6 +2127,288 @@
       ]
     },
     {
+      "name": "8f. Import, export and usage",
+      "description": "As owner. In the real app the browser reads a Slack export ZIP and sends these batches for you; here they are small hand-made examples.",
+      "item": [
+        {
+          "name": "Start an import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/import",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "import"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Owner only. Returns a session id; every following call uses it."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Started (201)', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('importId', pm.response.json().sessionId);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import people",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/import/{{importId}}/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "import", "{{importId}}", "users"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"users\": [\n    {\n      \"slackId\": \"U1\",\n      \"name\": \"marlize\",\n      \"realName\": \"Marlize van Wyk\",\n      \"email\": \"marlize@old.example\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Up to 15 per call. Matched to existing accounts by email; anyone else becomes a deactivated placeholder (keeps authorship, cannot sign in)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Imported (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import a channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/import/{{importId}}/channels",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "import", "{{importId}}", "channels"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channels\": [\n    {\n      \"slackId\": \"C1\",\n      \"kind\": \"public\",\n      \"name\": \"general\",\n      \"topic\": \"From Slack\",\n      \"memberSlackIds\": [\n        \"U1\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Up to 10 per call. A taken name gets -imported added."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Imported (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import messages",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/import/{{importId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "import", "{{importId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"channelSlackId\": \"C1\",\n  \"messages\": [\n    {\n      \"ts\": \"1700000000.000100\",\n      \"user\": \"U1\",\n      \"text\": \"Boundary wall under 2.1 m? <!here>\"\n    },\n    {\n      \"ts\": \"1700000060.000200\",\n      \"user\": \"U1\",\n      \"text\": \"*1.8 m* on the plan\",\n      \"threadTs\": \"1700000000.000100\",\n      \"reactions\": [\n        {\n          \"name\": \"+1\",\n          \"users\": [\n            \"U1\"\n          ]\n        }\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Up to 20 per call, oldest first. Send it twice: the second time imports nothing (safe to re-run)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Imported (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Import status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/import/{{importId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "import", "{{importId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Read (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Finish the import",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/import/{{importId}}/finish",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "import", "{{importId}}", "finish"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Recounts thread replies and closes the import."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Finished (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Export manifest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/export",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "export"]
+            },
+            "description": "Owner only. DMs are left out unless you add ?includeDms=1. Every export is recorded in the security log."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Exported (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Export one channel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/export/conversations/{{channelId}}/messages?limit=500",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "export", "conversations", "{{channelId}}", "messages"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "500"
+                }
+              ]
+            },
+            "description": "All messages in order, 500 per page; use ?after=<nextAfter> for the next page."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Exported (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Usage against free limits",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/admin/usage",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "admin", "usage"]
+            },
+            "description": "Database size, file storage, emails and imports today, with warnings at 80%."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Read (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "9. Must fail",
       "description": "As owner. Every request here should be refused; a green test means the rule held.",
       "item": [
