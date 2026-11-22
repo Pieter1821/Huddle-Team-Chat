@@ -14,6 +14,14 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src/worker", "src/shared", "test", "vitest.config.ts", "drizzle.config.ts"],
+  "include": [
+    "src/worker",
+    "src/shared",
+    "test",
+    "e2e",
+    "vitest.config.ts",
+    "drizzle.config.ts",
+    "playwright.config.ts"
+  ],
   "exclude": ["src/web"]
 }
