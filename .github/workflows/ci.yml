@@ -27,8 +27,10 @@ jobs:
         run: npm run format:check
       - name: Lint
         run: npm run lint
+      # Secret names come from .dev.vars; CI uses the committed example (names only, no values) so the
+      # generated types match a developer's machine exactly.
       - name: Generated Worker types are current
-        run: npx wrangler types && git diff --exit-code worker-configuration.d.ts
+        run: cp .dev.vars.example .dev.vars && npx wrangler types && git diff --exit-code worker-configuration.d.ts
       - name: Type check
         run: npm run typecheck
       - name: Schema and migrations agree
