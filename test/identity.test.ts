@@ -129,6 +129,13 @@ describe('invite-only sign-in', () => {
     );
   });
 
+  it('puts new members in #general so they land somewhere shared', async () => {
+    const owner = await setupWorkspace();
+    const member = await addMember(owner.cookie, 'jaco@example.com', 'member');
+    const list = await api('/api/conversations', { cookie: member.cookie });
+    expect(list.json.conversations.map((c: { name: string }) => c.name)).toEqual(['general']);
+  });
+
   it('shows an invitation landing page from its link, without signing in', async () => {
     const owner = await setupWorkspace('Brightwater Studio');
     const inv = await api('/api/invitations', {
