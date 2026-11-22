@@ -1912,6 +1912,221 @@
       ]
     },
     {
+      "name": "8e. Branding and webhooks",
+      "description": "As owner. The workspace look, and alerts from other tools.",
+      "item": [
+        {
+          "name": "Public branding (no sign-in needed)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/branding",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "branding"]
+            },
+            "description": "Name, accent colour and logo URL: what the sign-in page shows."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Read (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Set the accent colour",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspace",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspace"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"accent\": \"#ffb020\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Must keep dark button text readable (contrast of at least 4.5:1 with #151515); too-dark colours are refused. null resets to the default teal."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Saved (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Upload a logo",
+          "request": {
+            "method": "PUT",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/workspace/logo",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "workspace", "logo"]
+            },
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            },
+            "description": "Body → binary: a PNG, JPEG or WebP up to 1 MB. SVG is refused (it can carry scripts)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Uploaded (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create a webhook",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "webhooks"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Uptime monitor\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Admins only, channels only. The secret URL is shown only in this response."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created (201)', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('webhookUrl', pm.response.json().url);",
+                  "pm.environment.set('webhookId', pm.response.json().webhook.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Post to the webhook (as another tool)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Idempotency-Key",
+                "value": "deploy-4711-done"
+              }
+            ],
+            "url": {
+              "raw": "{{webhookUrl}}"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"text\": \"Deploy 4711 finished\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "No session needed: the token in the URL is the credential. Send it twice: the Idempotency-Key makes the second a 200 with the same message. Limited to 30 a minute."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Posted (201) or duplicate (200)', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "List webhooks",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/webhooks",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "webhooks"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Revoke the webhook",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/webhooks/{{webhookId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "webhooks", "{{webhookId}}"]
+            },
+            "description": "Its URL stops working at once (404)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Revoked (204)', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "9. Must fail",
       "description": "As owner. Every request here should be refused; a green test means the rule held.",
       "item": [

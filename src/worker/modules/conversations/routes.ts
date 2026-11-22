@@ -1,7 +1,14 @@
 import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
-import { conversation, conversationMember, message, notification, user } from '../../db/schema';
+import {
+  conversation,
+  conversationMember,
+  message,
+  notification,
+  user,
+  workspaceMember,
+} from '../../db/schema';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody, queryParams } from '../../lib/validate';
@@ -169,12 +176,22 @@ export const conversationRoutes = new Hono<AppEnv>()
     const { db, actor } = c.var;
     const conv = await readableConversation(db, actor, c.req.param('id'));
     const members = await db
-      .select({ userId: user.id, name: user.name, image: user.image })
+      .select({ userId: user.id, name: user.name, image: user.image, role: workspaceMember.role })
       .from(conversationMember)
       .innerJoin(user, eq(user.id, conversationMember.userId))
+      .innerJoin(
+        workspaceMember,
+        and(eq(workspaceMember.userId, user.id), eq(workspaceMember.workspaceId, conv.workspaceId)),
+      )
       .where(eq(conversationMember.conversationId, conv.id))
       .orderBy(sql`lower(${user.name})`);
-    return c.json({ conversation: conv, members, isMember: members.some((m) => m.userId === actor.userId) });
+    return c.json({
+      conversation: conv,
+      members,
+      isMember: members.some((m) => m.userId === actor.userId),
+      // Lets the app show that people from outside the team can read this conversation.
+      guestCount: members.filter((m) => m.role === 'guest').length,
+    });
   })
 
   .patch(

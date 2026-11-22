@@ -292,6 +292,8 @@ export const message = sqliteTable(
   (t) => [
     uniqueIndex('message_conversation_seq').on(t.conversationId, t.seq),
     uniqueIndex('message_client_id').on(t.authorId, t.clientMsgId),
+    // Retries from the same webhook with the same Idempotency-Key are one message.
+    uniqueIndex('message_webhook_client_id').on(t.webhookId, t.clientMsgId),
     index('message_thread')
       .on(t.parentId, t.seq)
       .where(sql`${t.parentId} IS NOT NULL`),

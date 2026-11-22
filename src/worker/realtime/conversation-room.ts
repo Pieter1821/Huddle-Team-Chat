@@ -53,6 +53,7 @@ export const toMessageDto = (m: MessageRow): MessageDto => ({
   deletedAt: m.deletedAt?.toISOString() ?? null,
   createdAt: m.createdAt.toISOString(),
   clientMsgId: m.clientMsgId,
+  webhookId: m.webhookId,
 });
 
 /**
@@ -75,7 +76,10 @@ async function attempt<T>(work: () => Promise<T>): Promise<RoomResult<T>> {
 
 export type PostInput = {
   conversationId: string;
-  authorId: string;
+  /** null for messages from an incoming webhook (then webhookId is set). */
+  authorId: string | null;
+  webhookId?: string | null | undefined;
+  webhookName?: string | null | undefined;
   body: string;
   clientMsgId: string;
   parentId?: string | null | undefined;
@@ -234,7 +238,7 @@ export class ConversationRoom extends DurableObject<Env> {
    */
   private async notificationsFor(input: {
     conversationId: string;
-    authorId: string;
+    authorId: string | null;
     body: string;
     parentId: string | null;
   }) {
@@ -308,15 +312,23 @@ export class ConversationRoom extends DurableObject<Env> {
   async post(input: PostInput): Promise<RoomResult<{ message: MessageDto; created: boolean }>> {
     return this.serialize(() =>
       attempt(async () => {
-        // A retried send (same author, same clientMsgId) returns the original instead of a duplicate.
+        // A retried send (same author or webhook, same clientMsgId) returns the original, not a duplicate.
         const existing = await this.db.query.message.findFirst({
-          where: and(eq(message.authorId, input.authorId), eq(message.clientMsgId, input.clientMsgId)),
+          where: and(
+            input.authorId
+              ? eq(message.authorId, input.authorId)
+              : eq(message.webhookId, input.webhookId ?? ''),
+            eq(message.clientMsgId, input.clientMsgId),
+          ),
         });
         if (existing) {
           if (existing.conversationId !== input.conversationId) {
             throw new AppError(409, 'client_msg_id_reused', 'That message id was already used elsewhere.');
           }
-          return { message: toMessageDto(existing), created: false };
+          return {
+            message: { ...toMessageDto(existing), webhookName: input.webhookName ?? null },
+            created: false,
+          };
         }
 
         let parentId: string | null = null;
@@ -346,7 +358,7 @@ export class ConversationRoom extends DurableObject<Env> {
             conversationId: input.conversationId,
             seq,
             authorId: input.authorId,
-            webhookId: null,
+            webhookId: input.webhookId ?? null,
             clientMsgId: input.clientMsgId,
             parentId,
             body: input.body,
@@ -357,7 +369,11 @@ export class ConversationRoom extends DurableObject<Env> {
             deletedAt: null,
             createdAt: at,
           };
-          created = { ...toMessageDto({ ...row, rowId: 0 }), files: files.map(toFileDto) };
+          created = {
+            ...toMessageDto({ ...row, rowId: 0 }),
+            files: files.map(toFileDto),
+            webhookName: input.webhookName ?? null,
+          };
           return {
             event: { type: 'message.created', data: { message: created } },
             changes: [
@@ -629,6 +645,9 @@ export class ConversationRoom extends DurableObject<Env> {
   private async claimableFiles(input: PostInput) {
     const ids = [...new Set(input.fileIds ?? [])];
     if (!ids.length) return [];
+    // Webhook messages have no author, so they cannot carry uploads.
+    const authorId = input.authorId;
+    if (!authorId) throw notFound('One of those files');
     const rows = await this.db
       .select()
       .from(file)
@@ -636,7 +655,7 @@ export class ConversationRoom extends DurableObject<Env> {
         and(
           inArray(file.id, ids),
           eq(file.conversationId, input.conversationId),
-          eq(file.uploaderId, input.authorId),
+          eq(file.uploaderId, authorId),
           isNull(file.messageId),
           eq(file.status, 'ready'),
         ),
