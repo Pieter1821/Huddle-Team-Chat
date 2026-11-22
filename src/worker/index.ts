@@ -5,6 +5,8 @@ import { AppError } from './lib/errors';
 import { withServices, type AppEnv } from './middleware/context';
 import { requireSameOrigin } from './middleware/origin';
 import { auditRoutes } from './modules/audit/routes';
+import { conversationRoutes } from './modules/conversations/routes';
+import { realtimeRoutes } from './modules/realtime/routes';
 import { invitationRoutes } from './modules/invitations/routes';
 import { memberRoutes } from './modules/members/routes';
 import { setupRoutes } from './modules/setup/routes';
@@ -46,6 +48,8 @@ app.route('/workspace', workspaceRoutes);
 app.route('/invitations', invitationRoutes);
 app.route('/members', memberRoutes);
 app.route('/admin/audit', auditRoutes);
+app.route('/conversations', conversationRoutes);
+app.route('/realtime', realtimeRoutes);
 
 app.notFound((c) => c.json({ error: { code: 'not_found', message: 'No such endpoint.' } }, 404));
 
@@ -60,5 +64,9 @@ app.onError((err, c) => {
   console.error('unhandled error', err);
   return c.json({ error: { code: 'internal', message: 'Something went wrong.' } }, 500);
 });
+
+// Durable Object classes must be exported from the Worker entry point.
+export { ConversationRoom } from './realtime/conversation-room';
+export { WorkspaceHub } from './realtime/workspace-hub';
 
 export default app;

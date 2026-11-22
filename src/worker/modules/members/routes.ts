@@ -8,6 +8,8 @@ import { requireActor, type AppEnv } from '../../middleware/context';
 import { canChangeRole, canDeactivate, isAdmin, type Actor } from '../access/access';
 import { auditInsert } from '../audit/audit';
 import type { Db } from '../../db/client';
+import { hubFor } from '../../realtime/workspace-hub';
+import { roomFor } from '../conversations/service';
 
 async function findTarget(db: Db, actor: Actor, userId: string) {
   const target = await db.query.workspaceMember.findFirst({
@@ -125,6 +127,15 @@ export const memberRoutes = new Hono<AppEnv>()
         ),
       db.delete(session).where(eq(session.userId, target.userId)),
       auditInsert(db, { action: 'member.deactivated', actorId: actor.userId, targetId: target.userId }),
+    ]);
+    // Sessions are gone; also end every live connection right now, not at the next reconnect.
+    const rooms = await db
+      .select({ id: conversationMember.conversationId })
+      .from(conversationMember)
+      .where(eq(conversationMember.userId, target.userId));
+    await Promise.all([
+      hubFor(c.env).disconnectUser(target.userId),
+      ...rooms.map((r) => roomFor(c.env, r.id).disconnectUser(target.userId)),
     ]);
     return c.json({ member: { userId: target.userId, status: 'deactivated' } });
   })

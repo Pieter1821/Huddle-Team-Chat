@@ -12,4 +12,17 @@
       "migrations_dir": "migrations",
     },
   ],
+  // One ConversationRoom per channel or DM: the single, ordered writer for that conversation.
+  "durable_objects": {
+    "bindings": [
+      { "name": "CONVERSATION_ROOM", "class_name": "ConversationRoom" },
+      // One WorkspaceHub per workspace: presence and sidebar badge pings.
+      { "name": "WORKSPACE_HUB", "class_name": "WorkspaceHub" },
+    ],
+  },
+  // The free plan only offers SQLite-backed Durable Objects, so classes are declared with new_sqlite_classes.
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["ConversationRoom"] },
+    { "tag": "v2", "new_sqlite_classes": ["WorkspaceHub"] },
+  ],
 }

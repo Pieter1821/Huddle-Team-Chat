@@ -1017,6 +1017,400 @@
       ]
     },
     {
+      "name": "8b. Conversations and messages",
+      "description": "As owner. Creates a channel, posts, threads, edits, deletes, catches up and opens a DM. (Live sockets cannot be saved in a collection; they are covered by the automated tests.)",
+      "item": [
+        {
+          "name": "Create a channel",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Project Harbour House\",\n  \"kind\": \"public\",\n  \"topic\": \"Design development\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Names are tidied to lowercase-with-dashes. Guests cannot create channels."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Created (201) or name taken (409)', () => pm.expect(pm.response.code).to.be.oneOf([201, 409]));",
+                  "if (pm.response.code === 201) pm.environment.set('channelId', pm.response.json().conversation.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My conversations (sidebar)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations"]
+            },
+            "description": "Channels and DMs you belong to, with unread and mention counts."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Browse public channels",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/browse",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "browse"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Channel details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Found (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send a message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Uploaded the revised ground floor plan (rev C).\",\n  \"clientMsgId\": \"{{$guid}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "clientMsgId makes retries safe: sending the same id twice returns the original (200) instead of a duplicate."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Sent (201)', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('messageId', pm.response.json().message.id);",
+                  "pm.environment.set('lastSeq', pm.response.json().message.seq);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Reply in a thread",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Bench at 900, sill at 1 050.\",\n  \"clientMsgId\": \"{{$guid}}\",\n  \"parentId\": \"{{messageId}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Replied (201)', () => pm.response.to.have.status(201));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Message history",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages?limit=50",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Newest page, oldest-to-newest. Use ?before=<seq> for older pages."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open the thread",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages/{{messageId}}/thread",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages", "{{messageId}}", "thread"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Found (200)', () => pm.response.to.have.status(200));",
+                  "pm.test('Has the reply', () => pm.expect(pm.response.json().replies.length).to.be.above(0));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Edit the message",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages/{{messageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages", "{{messageId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Uploaded the revised ground floor plan (rev D).\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Only the author can edit."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Edited (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Catch up on events",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/events?after=0",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "events"],
+              "query": [
+                {
+                  "key": "after",
+                  "value": "0"
+                }
+              ]
+            },
+            "description": "Every change in order, numbered by seq: what a reconnecting app replays."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mark as read",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/read",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "read"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"seq\": 9999\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Moves your read marker forward (never back); capped at the latest seq."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Marked (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Delete the message",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages/{{messageId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages", "{{messageId}}"]
+            },
+            "description": "Soft delete: the text is wiped, the slot stays. Authors and admins only."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Deleted (204)', () => pm.response.to.have.status(204));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Open a DM with the invitee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/dm",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "dm"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userIds\": [\n    \"{{memberId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "The same people always reopen the same DM (201 the first time, then 200)."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Opened', () => pm.expect(pm.response.code).to.be.oneOf([200, 201]));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "9. Must fail",
       "description": "As owner. Every request here should be refused; a green test means the rule held.",
       "item": [
