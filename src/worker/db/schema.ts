@@ -429,7 +429,16 @@ export const userPreference = sqliteTable(
       .default('hourly'),
     digestDelayMin: integer('digest_delay_min').notNull().default(120),
     timezone: text('timezone').notNull().default('UTC'),
+    // Do Not Disturb: no digests (or pushes) before this moment.
     pausedUntil: timestamp('paused_until'),
+    lastDigestAt: timestamp('last_digest_at'),
   },
   (t) => [check('user_preference_digest', sql`${t.digest} IN ('hourly','daily','off')`)],
 );
+
+// Emails sent per UTC day, counted by Huddle itself: the free email plan allows about 100 a day, and
+// digests stop early so sign-in codes always have room.
+export const emailUsage = sqliteTable('email_usage', {
+  day: text('day').primaryKey(), // YYYY-MM-DD (UTC)
+  sent: integer('sent').notNull().default(0),
+});

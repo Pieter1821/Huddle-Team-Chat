@@ -15,6 +15,20 @@
   // Private bucket for uploads. Nothing in it is ever public: every download goes through an
   // authorised Worker route.
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "huddle-files" }],
+  // Digest emails go through a queue: failed sends retry (3 times), then park in a dead-letter queue.
+  "queues": {
+    "producers": [{ "binding": "NOTIFICATIONS", "queue": "huddle-notifications" }],
+    "consumers": [
+      {
+        "queue": "huddle-notifications",
+        "max_batch_size": 10,
+        "max_retries": 3,
+        "dead_letter_queue": "huddle-notifications-dlq",
+      },
+    ],
+  },
+  // Hourly: schedule digests, clean up, republish anything stuck in the outbox.
+  "triggers": { "crons": ["0 * * * *"] },
   // One ConversationRoom per channel or DM: the single, ordered writer for that conversation.
   "durable_objects": {
     "bindings": [

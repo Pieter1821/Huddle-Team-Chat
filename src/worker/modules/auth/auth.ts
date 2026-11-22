@@ -96,14 +96,14 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
         storeOTP: 'hashed',
         async sendVerificationOTP({ email, otp }) {
           if (!(await mayReceiveSignIn(db, config, email))) return;
-          await sendEmail(config, signInCodeEmail(email, otp, await workspaceName(db)));
+          await sendEmail(config, signInCodeEmail(email, otp, await workspaceName(db)), db);
         },
       }),
       magicLink({
         expiresIn: FIVE_MINUTES,
         async sendMagicLink({ email, url }) {
           if (!(await mayReceiveSignIn(db, config, email))) return;
-          await sendEmail(config, magicLinkEmail(email, url, await workspaceName(db)));
+          await sendEmail(config, magicLinkEmail(email, url, await workspaceName(db)), db);
         },
       }),
     ],

@@ -124,7 +124,11 @@ export const invitationRoutes = new Hono<AppEnv>()
     const link = `${config.appUrl}/invite/${token}`;
     let emailSent = false;
     try {
-      await sendEmail(config, invitationEmail(body.email, link, ws.name, actor.name, body.role === 'guest'));
+      await sendEmail(
+        config,
+        invitationEmail(body.email, link, ws.name, actor.name, body.role === 'guest'),
+        db,
+      );
       emailSent = Boolean(config.email);
     } catch (err) {
       // The invitation stands; the inviter can still copy the link and share it another way.

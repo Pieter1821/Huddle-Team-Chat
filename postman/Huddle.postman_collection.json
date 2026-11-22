@@ -1741,6 +1741,177 @@
       ]
     },
     {
+      "name": "8d. Notifications",
+      "description": "As owner. Email digests of unread mentions, DMs and thread replies are built by an hourly job; these requests control them.",
+      "item": [
+        {
+          "name": "My notification settings",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/me/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me", "preferences"]
+            },
+            "description": "Defaults: hourly digest, after 2 hours unread, UTC, Do Not Disturb off."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Read (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Daily digest at 08:00 in my time zone",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me", "preferences"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"digest\": \"daily\",\n  \"timezone\": \"Africa/Johannesburg\",\n  \"digestDelayMin\": 60\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "digest: hourly | daily | off. digestDelayMin: 15 to 1440. timezone: any IANA zone."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Saved (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Do Not Disturb until tomorrow",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me", "preferences"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"pausedUntil\": \"2030-01-01T06:00:00.000Z\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "No digests until this moment. Send null to switch it off."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Saved (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Back to hourly, DND off",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/me/preferences",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "me", "preferences"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"digest\": \"hourly\",\n  \"pausedUntil\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Saved (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mentions only in this channel",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "notifications"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"level\": \"mentions\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "all | mentions | muted. Muted conversations never appear in digests."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Saved (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "9. Must fail",
       "description": "As owner. Every request here should be refused; a green test means the rule held.",
       "item": [
