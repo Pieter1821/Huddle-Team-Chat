@@ -12,7 +12,32 @@ export type Email = {
   headers?: Record<string, string>;
 };
 
-/** The free email plan allows about 100 a day; digests stop at this many so sign-in codes always fit. */
+/**
+ * How email actually leaves the Worker. Huddle ships with no provider wired in: a transport is the
+ * one place a delivery method plugs in later. It receives the sender address and an optional
+ * idempotency key, which transports that support one should pass on so a retried send of the same
+ * message is never delivered twice. It throws on failure.
+ */
+export type EmailTransport = (
+  email: Email & { from: string },
+  options: { idempotencyKey?: string | undefined },
+) => Promise<void>;
+
+/** No delivery method is configured yet, so there is no transport. */
+let transport: EmailTransport | null = null;
+
+/**
+ * Plugs in (or removes) the delivery method. Used by tests with a fake transport, and the single place
+ * a real provider adapter will be wired in.
+ */
+export function useEmailTransport(next: EmailTransport | null): void {
+  transport = next;
+}
+
+/** Whether emails really leave the Worker (false while none is configured, even locally). */
+export const emailDeliveryConfigured = () => transport !== null;
+
+/** Daily email budget for digests, leaving room within it for sign-in codes. */
 export const DIGEST_DAILY_BUDGET = 80;
 
 const today = (now = new Date()) => now.toISOString().slice(0, 10);
@@ -43,50 +68,40 @@ async function releaseEmailSlot(db: Db, now = new Date()): Promise<void> {
   await db.run(sql`UPDATE email_usage SET sent = max(sent - 1, 0) WHERE day = ${today(now)}`);
 }
 
-async function deliver(config: Config, email: Email): Promise<void> {
-  if (!config.email) {
-    if (config.isLocal) {
-      console.warn(`\n[email] to: ${email.to}\n[email] subject: ${email.subject}\n${email.text}\n`);
-      return;
-    }
-    throw new AppError(503, 'email_not_configured', 'Email is not set up for this workspace yet.');
+async function deliver(config: Config, email: Email, idempotencyKey: string | undefined): Promise<void> {
+  if (transport) {
+    await transport({ ...email, from: config.emailFrom }, { idempotencyKey });
+    return;
   }
-  const res = await fetch('https://api.resend.com/emails', {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${config.email.apiKey}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      from: config.email.from,
-      to: [email.to],
-      subject: email.subject,
-      text: email.text,
-      html: email.html,
-      ...(email.headers ? { headers: email.headers } : {}),
-    }),
-  });
-  if (!res.ok) {
-    // Log the status only: the response may echo the recipient or the message.
-    console.error('email send failed', res.status);
-    throw new AppError(502, 'email_failed', 'The email could not be sent. Try again shortly.');
+  // No delivery method yet. On this machine the email is printed so sign-in works during
+  // development; anywhere else that is an error, because printing sign-in codes into production
+  // logs would be a security hole.
+  if (config.isLocal) {
+    console.warn(`\n[email] to: ${email.to}\n[email] subject: ${email.subject}\n${email.text}\n`);
+    return;
   }
+  throw new AppError(503, 'email_not_configured', 'Email is not set up for this workspace yet.');
 }
 
+export type SendOptions = {
+  /** Count the email against today's usage (and enforce `limit`). */
+  db?: Db | undefined;
+  /** Refuse the send once this many emails have gone out today. */
+  limit?: number | null | undefined;
+  /** Passed to the transport so a retry of the same message is delivered at most once. */
+  idempotencyKey?: string | undefined;
+};
+
 /**
- * Sends through Resend when a key is configured. Running locally without one, the email is printed
- * to the terminal so sign-in works during development; anywhere else that is an error, because
- * printing sign-in codes into production logs would be a security hole.
- *
- * With a database, the email is counted against today's usage first (see reserveEmailSlot); pass
- * `limit` to refuse the send once that many emails have gone out today. Returns false when refused.
+ * Sends an email. With a database, the email is counted against today's usage first (see
+ * reserveEmailSlot) and the slot is given back if delivery fails. Returns false when the daily
+ * limit refused the send.
  */
-export async function sendEmail(
-  config: Config,
-  email: Email,
-  db?: Db,
-  limit: number | null = null,
-): Promise<boolean> {
+export async function sendEmail(config: Config, email: Email, options: SendOptions = {}): Promise<boolean> {
+  const { db, limit = null, idempotencyKey } = options;
   if (db && !(await reserveEmailSlot(db, limit))) return false;
   try {
-    await deliver(config, email);
+    await deliver(config, email, idempotencyKey);
   } catch (err) {
     if (db) await releaseEmailSlot(db);
     throw err;

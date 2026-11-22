@@ -7,8 +7,7 @@ ADMIN_EMAIL=
 # At least 32 random characters. Generate one with: npx @better-auth/cli secret
 BETTER_AUTH_SECRET=
 
-# Optional: email delivery through Resend (needs a verified sending domain).
-RESEND_API_KEY=
+# Optional: the sender address for outgoing email, e.g. "Huddle <no-reply@example.com>".
 EMAIL_FROM=
 
 # Optional: "Sign in with Google".

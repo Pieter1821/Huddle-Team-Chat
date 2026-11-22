@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getConfig, type Config } from '../src/worker/config';
-import { sendEmail } from '../src/worker/lib/email';
+import { getConfig } from '../src/worker/config';
+import { emailDeliveryConfigured, sendEmail } from '../src/worker/lib/email';
 import { newId } from '../src/worker/lib/id';
 import { randomToken, sha256Hex } from '../src/worker/lib/crypto';
 
@@ -8,7 +8,6 @@ const baseEnv = {
   APP_URL: 'https://chat.example.com/',
   ADMIN_EMAIL: 'Owner@Example.com',
   BETTER_AUTH_SECRET: 'x'.repeat(32),
-  RESEND_API_KEY: '',
   EMAIL_FROM: '',
   GOOGLE_CLIENT_ID: '',
   GOOGLE_CLIENT_SECRET: '',
@@ -34,13 +33,18 @@ describe('tokens', () => {
 });
 
 describe('getConfig', () => {
-  it('normalises the URL and admin email and treats empty optionals as unset', () => {
+  it('normalises the URL and admin email, and derives a sender address', () => {
     const cfg = getConfig(baseEnv);
     expect(cfg.appUrl).toBe('https://chat.example.com');
     expect(cfg.adminEmail).toBe('owner@example.com');
-    expect(cfg.email).toBeNull();
+    expect(cfg.emailFrom).toBe('Huddle <no-reply@chat.example.com>');
     expect(cfg.google).toBeNull();
     expect(cfg.isLocal).toBe(false);
+  });
+
+  it('uses EMAIL_FROM when set', () => {
+    const cfg = getConfig({ ...baseEnv, EMAIL_FROM: 'Brightwater <chat@brightwater.example>' });
+    expect(cfg.emailFrom).toBe('Brightwater <chat@brightwater.example>');
   });
 
   it('fails loudly with a readable message when misconfigured', () => {
@@ -49,41 +53,25 @@ describe('getConfig', () => {
   });
 });
 
-describe('sendEmail', () => {
-  const prodConfig = (email: Config['email']): Config => ({ ...getConfig(baseEnv), email });
+describe('sendEmail with no delivery method configured', () => {
+  const email = { to: 'a@b.c', subject: 's', text: 'Your code is 123456', html: 'h' };
 
-  it('refuses to print emails when not running locally', async () => {
-    await expect(
-      sendEmail(prodConfig(null), { to: 'a@b.c', subject: 's', text: 't', html: 'h' }),
-    ).rejects.toMatchObject({
+  it('reports that email is not configured', () => {
+    expect(emailDeliveryConfigured()).toBe(false);
+  });
+
+  it('refuses in production rather than printing sign-in codes into logs', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await expect(sendEmail(getConfig(baseEnv), email)).rejects.toMatchObject({
       code: 'email_not_configured',
     });
+    expect(warn).not.toHaveBeenCalled();
   });
 
-  it('sends through Resend with the API key', async () => {
-    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{}', { status: 200 }));
-    await sendEmail(prodConfig({ apiKey: 're_test', from: 'Huddle <a@b.c>' }), {
-      to: 'x@y.z',
-      subject: 'Hi',
-      text: 't',
-      html: 'h',
-    });
-    const [url, init] = fetchSpy.mock.calls[0]!;
-    expect(url).toBe('https://api.resend.com/emails');
-    expect(new Headers(init?.headers).get('authorization')).toBe('Bearer re_test');
-    expect(JSON.parse(init?.body as string)).toMatchObject({ to: ['x@y.z'], subject: 'Hi' });
-  });
-
-  it('reports a failed send without leaking the provider response', async () => {
-    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response('{"to":"x@y.z"}', { status: 422 }));
-    vi.spyOn(console, 'error').mockImplementation(() => {});
-    await expect(
-      sendEmail(prodConfig({ apiKey: 're_test', from: 'a@b.c' }), {
-        to: 'x@y.z',
-        subject: 's',
-        text: 't',
-        html: 'h',
-      }),
-    ).rejects.toMatchObject({ code: 'email_failed' });
+  it('prints to the terminal when running locally', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const local = getConfig({ ...baseEnv, APP_URL: 'http://localhost:8787' });
+    expect(await sendEmail(local, email)).toBe(true);
+    expect(String(warn.mock.calls[0]?.[0])).toContain('Your code is 123456');
   });
 });

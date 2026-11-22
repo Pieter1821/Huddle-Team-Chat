@@ -3,7 +3,7 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { invitation, user, workspace, workspaceMember } from '../../db/schema';
 import { sha256Hex, randomToken } from '../../lib/crypto';
-import { sendEmail } from '../../lib/email';
+import { emailDeliveryConfigured, sendEmail } from '../../lib/email';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody } from '../../lib/validate';
@@ -124,12 +124,10 @@ export const invitationRoutes = new Hono<AppEnv>()
     const link = `${config.appUrl}/invite/${token}`;
     let emailSent = false;
     try {
-      await sendEmail(
-        config,
-        invitationEmail(body.email, link, ws.name, actor.name, body.role === 'guest'),
+      await sendEmail(config, invitationEmail(body.email, link, ws.name, actor.name, body.role === 'guest'), {
         db,
-      );
-      emailSent = Boolean(config.email);
+      });
+      emailSent = emailDeliveryConfigured();
     } catch (err) {
       // The invitation stands; the inviter can still copy the link and share it another way.
       if (!(err instanceof AppError)) throw err;

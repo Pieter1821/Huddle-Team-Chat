@@ -10,7 +10,6 @@ const schema = z.object({
   APP_URL: z.url({ message: 'APP_URL must be the full URL Huddle is served from' }),
   ADMIN_EMAIL: z.email({ message: 'ADMIN_EMAIL must be the email address of the first owner' }),
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
-  RESEND_API_KEY: optional,
   EMAIL_FROM: optional,
   GOOGLE_CLIENT_ID: optional,
   GOOGLE_CLIENT_SECRET: optional,
@@ -22,7 +21,8 @@ export type Config = {
   authSecret: string;
   /** True when running on this machine: emails print to the terminal instead of failing. */
   isLocal: boolean;
-  email: { apiKey: string; from: string } | null;
+  /** Sender address for outgoing email (the delivery transport itself is chosen in lib/email.ts). */
+  emailFrom: string;
   google: { clientId: string; clientSecret: string } | null;
 };
 
@@ -39,9 +39,7 @@ export function getConfig(env: Env): Config {
     adminEmail: v.ADMIN_EMAIL.toLowerCase(),
     authSecret: v.BETTER_AUTH_SECRET,
     isLocal: host === 'localhost' || host === '127.0.0.1',
-    email: v.RESEND_API_KEY
-      ? { apiKey: v.RESEND_API_KEY, from: v.EMAIL_FROM ?? `Huddle <no-reply@${host}>` }
-      : null,
+    emailFrom: v.EMAIL_FROM ?? `Huddle <no-reply@${host}>`,
     google:
       v.GOOGLE_CLIENT_ID && v.GOOGLE_CLIENT_SECRET
         ? { clientId: v.GOOGLE_CLIENT_ID, clientSecret: v.GOOGLE_CLIENT_SECRET }
