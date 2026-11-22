@@ -3,10 +3,11 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { conversationMember, userPreference } from '../../db/schema';
 import { verify } from '../../lib/crypto';
-import { forbidden, notFound } from '../../lib/errors';
+import { AppError, forbidden, notFound } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isMember, readableConversation } from '../conversations/service';
+import { UNSUBSCRIBE_PURPOSE } from './digest';
 
 const DEFAULTS = { digest: 'hourly' as const, digestDelayMin: 120, timezone: 'UTC', pausedUntil: null };
 
@@ -99,9 +100,19 @@ export const conversationNotificationRoutes = new Hono<AppEnv>()
 export const unsubscribeRoutes = new Hono<AppEnv>().on(['GET', 'POST'], '/', async (c) => {
   const { db, config } = c.var;
   const userId = c.req.query('u') ?? '';
+  const expires = c.req.query('e') ?? '';
   const token = c.req.query('t') ?? '';
-  if (!userId || !token || !(await verify(config.authSecret, `unsubscribe:${userId}`, token))) {
+  // The signature covers the user id and the expiry together, with the unsubscribe-only key.
+  if (
+    !userId ||
+    !/^\d{1,12}$/.test(expires) ||
+    !token ||
+    !(await verify(config.authSecret, UNSUBSCRIBE_PURPOSE, `${userId}.${expires}`, token))
+  ) {
     throw notFound('That unsubscribe link');
+  }
+  if (Number(expires) * 1000 < Date.now()) {
+    throw new AppError(410, 'link_expired', 'This link has expired. Sign in to change your email settings.');
   }
   await db
     .insert(userPreference)

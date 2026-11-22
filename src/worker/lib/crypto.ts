@@ -19,21 +19,38 @@ const toBase64Url = (bytes: Uint8Array) =>
     .replaceAll('/', '_')
     .replace(/=+$/, '');
 
-/** HMAC-SHA256 signature of `data` with the server secret, URL-safe. */
-export async function sign(secret: string, data: string): Promise<string> {
-  const key = await crypto.subtle.importKey(
-    'raw',
-    new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
+/**
+ * A signing key derived from the server secret for ONE purpose (HKDF-SHA256, purpose as the info
+ * string). Signatures made for one purpose are useless for any other, and the raw secret itself never
+ * signs anything.
+ */
+async function purposeKey(secret: string, purpose: string): Promise<CryptoKey> {
+  const master = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'HKDF', false, [
+    'deriveKey',
+  ]);
+  return crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info: new TextEncoder().encode(purpose) },
+    master,
+    { name: 'HMAC', hash: 'SHA-256', length: 256 },
     false,
     ['sign'],
   );
+}
+
+/** HMAC-SHA256 signature of `data` with the key for `purpose`, URL-safe. */
+export async function sign(secret: string, purpose: string, data: string): Promise<string> {
+  const key = await purposeKey(secret, purpose);
   return toBase64Url(new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(data))));
 }
 
 /** Checks a signature without leaking, through timing, how much of it was right. */
-export async function verify(secret: string, data: string, signature: string): Promise<boolean> {
-  const expected = new TextEncoder().encode(await sign(secret, data));
+export async function verify(
+  secret: string,
+  purpose: string,
+  data: string,
+  signature: string,
+): Promise<boolean> {
+  const expected = new TextEncoder().encode(await sign(secret, purpose, data));
   const given = new TextEncoder().encode(signature);
   if (expected.byteLength !== given.byteLength) return false;
   return crypto.subtle.timingSafeEqual(expected, given);

@@ -81,8 +81,9 @@ describe('when a digest is due', () => {
       cookie: t.jaco.cookie,
     });
     await mentionJaco(t);
-    await age(30);
     const at = (utcHour: number) => new Date(Date.UTC(2030, 0, 15, utcHour, 0, 0));
+    // Created the night before those checks (digests only look back 7 days from "now").
+    await env.DB.prepare('UPDATE notification SET created_at = ?').bind(at(0).getTime()).run();
     expect(await dueUsers(db, at(5))).toEqual([]); // 07:00 in Johannesburg
     expect(await dueUsers(db, at(6))).toEqual([t.jaco.userId]); // 08:00
   });

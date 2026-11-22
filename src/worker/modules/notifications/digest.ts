@@ -8,8 +8,29 @@ import { DIGEST_DAILY_BUDGET, emailsSentToday, sendEmail, type Email } from '../
 export type DigestJob = { userId: string };
 
 const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
 const MAX_ITEMS = 10;
 const DAILY_DIGEST_HOUR = 8;
+/** Digests never reach further back than this, so unmuting a channel doesn't email month-old news. */
+const LOOKBACK_MS = 7 * DAY;
+export const UNSUBSCRIBE_PURPOSE = 'huddle:unsubscribe:v1';
+const UNSUBSCRIBE_TTL_MS = 90 * DAY;
+
+/**
+ * Which notifications a digest may contain, as SQL over `n` (notification): still unread and not yet
+ * emailed, recent, on a live message, in a conversation the person still belongs to and has not read
+ * past, and allowed by that conversation's level (muted: nothing; mentions: mentions only).
+ * Excluded notifications are left untouched rather than marked, so changing a level later behaves
+ * as expected; and because this same filter decides who is due, they never trigger empty jobs.
+ */
+const eligible = (now: Date) => sql`
+  n.read_at IS NULL AND n.emailed_at IS NULL AND n.created_at >= ${now.getTime() - LOOKBACK_MS}
+  AND m.deleted_at IS NULL AND m.seq > cm.last_read_seq
+  AND (cm.notify_level = 'all' OR (cm.notify_level = 'mentions' AND n.kind = 'mention'))`;
+
+const eligibleJoins = sql`
+  JOIN message m ON m.id = n.message_id
+  JOIN conversation_member cm ON cm.conversation_id = m.conversation_id AND cm.user_id = n.user_id`;
 
 type Candidate = {
   userId: string;
@@ -21,20 +42,34 @@ type Candidate = {
   oldest: number;
 };
 
-function localHour(timezone: string, now: Date): number {
+function localParts(timezone: string, at: Date): { hour: number; date: string } {
   try {
-    return Number(
-      new Intl.DateTimeFormat('en-GB', { timeZone: timezone, hour: 'numeric', hourCycle: 'h23' }).format(now),
-    );
+    const parts = new Intl.DateTimeFormat('en-CA', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).formatToParts(at);
+    const get = (type: string) => parts.find((p) => p.type === type)?.value ?? '';
+    return { hour: Number(get('hour')), date: `${get('year')}-${get('month')}-${get('day')}` };
   } catch {
-    return now.getUTCHours();
+    return { hour: at.getUTCHours(), date: at.toISOString().slice(0, 10) };
   }
 }
 
 /**
- * People who should get a digest this hour, oldest waiting first. Coarse on purpose: the precise
- * rules (membership, muting, deleted messages) are applied again when each digest is built.
+ * Daily digests go out at the first hourly run at or after 08:00 local time, once per local day, so
+ * a missed 08:00 run catches up at 09:00 instead of skipping the day, and nobody gets two in a day.
  */
+function dailyDue(c: Candidate, now: Date): boolean {
+  const local = localParts(c.timezone, now);
+  if (local.hour < DAILY_DIGEST_HOUR) return false;
+  return !c.lastDigestAt || localParts(c.timezone, new Date(c.lastDigestAt)).date !== local.date;
+}
+
+/** People who should get a digest this hour, oldest waiting first. */
 export async function dueUsers(db: Db, now: Date): Promise<string[]> {
   const candidates = await db.all<Candidate>(sql`
     SELECT wm.user_id AS userId,
@@ -46,8 +81,9 @@ export async function dueUsers(db: Db, now: Date): Promise<string[]> {
            MIN(n.created_at) AS oldest
     FROM workspace_member wm
     LEFT JOIN user_preference p ON p.user_id = wm.user_id
-    JOIN notification n ON n.user_id = wm.user_id AND n.read_at IS NULL AND n.emailed_at IS NULL
-    WHERE wm.status = 'active' AND COALESCE(p.digest, 'hourly') <> 'off'
+    JOIN notification n ON n.user_id = wm.user_id
+    ${eligibleJoins}
+    WHERE wm.status = 'active' AND COALESCE(p.digest, 'hourly') <> 'off' AND ${eligible(now)}
     GROUP BY wm.user_id
   `);
   const t = now.getTime();
@@ -55,10 +91,7 @@ export async function dueUsers(db: Db, now: Date): Promise<string[]> {
     .filter((c) => !(c.pausedUntil && c.pausedUntil > t)) // Do Not Disturb
     .filter((c) => c.oldest <= t - c.delayMin * 60_000) // waited long enough unread
     .filter((c) =>
-      c.digest === 'hourly'
-        ? !c.lastDigestAt || c.lastDigestAt <= t - 55 * 60_000
-        : localHour(c.timezone, now) === DAILY_DIGEST_HOUR &&
-          (!c.lastDigestAt || c.lastDigestAt <= t - 20 * HOUR),
+      c.digest === 'hourly' ? !c.lastDigestAt || c.lastDigestAt <= t - 55 * 60_000 : dailyDue(c, now),
     )
     .sort((a, b) => a.oldest - b.oldest)
     .map((c) => c.userId);
@@ -66,14 +99,12 @@ export async function dueUsers(db: Db, now: Date): Promise<string[]> {
 
 type Item = {
   notificationId: string;
-  kind: 'mention' | 'dm' | 'thread_reply';
   messageId: string;
   body: string;
   authorName: string | null;
   conversationId: string;
   convKind: string;
   convName: string | null;
-  level: 'all' | 'mentions' | 'muted';
 };
 
 const escapeHtml = (s: string) =>
@@ -89,37 +120,38 @@ function snippet(body: string, names: Map<string, string>): string {
   return readable.length > 140 ? `${readable.slice(0, 139)}…` : readable || '(file)';
 }
 
-export const unsubscribeUrl = async (config: Config, userId: string) =>
-  `${config.appUrl}/api/unsubscribe?u=${encodeURIComponent(userId)}&t=${await sign(config.authSecret, `unsubscribe:${userId}`)}`;
+/**
+ * A one-click unsubscribe link that expires after 90 days. It is signed with a key derived for this
+ * purpose only (never the raw server secret), over the user id AND the expiry, so neither can be
+ * changed without breaking the signature.
+ */
+export async function unsubscribeUrl(config: Config, userId: string, now = new Date()) {
+  const expires = Math.floor((now.getTime() + UNSUBSCRIBE_TTL_MS) / 1000);
+  const token = await sign(config.authSecret, UNSUBSCRIBE_PURPOSE, `${userId}.${expires}`);
+  return `${config.appUrl}/api/unsubscribe?u=${encodeURIComponent(userId)}&e=${expires}&t=${token}`;
+}
 
 /**
- * Builds one person's digest from what is still unread right now. Muted conversations send nothing,
- * "mentions only" conversations send only mentions, and conversations the person has left or
- * messages that were deleted are skipped. Returns every notification it looked at (so they are
- * handled once) and the email, or no email when nothing qualifies.
+ * Builds one person's digest from what is eligible right now and old enough. Returns the ids of the
+ * notifications it includes (only those are marked as emailed) and the email, or no email.
  */
 export async function buildDigest(db: Db, config: Config, userId: string, now: Date) {
   const prefs = await db.query.userPreference.findFirst({ where: eq(userPreference.userId, userId) });
   const cutoff = now.getTime() - (prefs?.digestDelayMin ?? 120) * 60_000;
-  const rows = await db.all<Item>(sql`
-    SELECT n.id AS notificationId, n.kind, m.id AS messageId, m.body,
-           u.name AS authorName, c.id AS conversationId, c.kind AS convKind, c.name AS convName,
-           cm.notify_level AS level
+  const items = await db.all<Item>(sql`
+    SELECT n.id AS notificationId, m.id AS messageId, m.body, u.name AS authorName,
+           c.id AS conversationId, c.kind AS convKind, c.name AS convName
     FROM notification n
-    JOIN message m ON m.id = n.message_id AND m.deleted_at IS NULL
+    ${eligibleJoins}
     JOIN conversation c ON c.id = m.conversation_id
-    JOIN conversation_member cm ON cm.conversation_id = c.id AND cm.user_id = n.user_id
     LEFT JOIN user u ON u.id = m.author_id
-    WHERE n.user_id = ${userId} AND n.read_at IS NULL AND n.emailed_at IS NULL
-      AND n.created_at <= ${cutoff} AND m.seq > cm.last_read_seq
+    WHERE n.user_id = ${userId} AND n.created_at <= ${cutoff} AND ${eligible(now)}
     ORDER BY n.created_at
   `);
-  const handled = rows.map((r) => r.notificationId);
-  const items = rows.filter((r) => r.level === 'all' || (r.level === 'mentions' && r.kind === 'mention'));
-  if (!items.length) return { handled, email: null };
+  if (!items.length) return { included: [] as string[], email: null };
 
   const recipient = await db.query.user.findFirst({ where: eq(user.id, userId), columns: { email: true } });
-  if (!recipient) return { handled, email: null };
+  if (!recipient) return { included: [] as string[], email: null };
   const ws = await db.query.workspace.findFirst({ columns: { name: true } });
   const workspaceName = ws?.name ?? 'Huddle';
 
@@ -141,7 +173,7 @@ export async function buildDigest(db: Db, config: Config, userId: string, now: D
     link: `${config.appUrl}/c/${i.conversationId}/m/${i.messageId}`,
   }));
   const more = items.length - shown.length;
-  const unsubscribe = await unsubscribeUrl(config, userId);
+  const unsubscribe = await unsubscribeUrl(config, userId, now);
   const count = items.length;
 
   const email: Email = {
@@ -172,32 +204,36 @@ export async function buildDigest(db: Db, config: Config, userId: string, now: D
       'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
     },
   };
-  return { handled, email };
+  return { included: items.map((i) => i.notificationId), email };
 }
 
+/**
+ * - 'sent': emailed; exactly the included notifications are marked.
+ * - 'nothing': nothing eligible (read meanwhile, muted, too new).
+ * - 'over_budget': today's email budget is used up. Nothing is marked, so the notifications stay
+ *   pending and the next day's hourly run schedules them again. The queue job is acknowledged on
+ *   purpose: retrying it within the day could not succeed and would only spend queue operations.
+ * Provider and configuration failures are thrown, so the queue retries them.
+ */
 export type DigestResult = 'sent' | 'nothing' | 'over_budget';
 
-/**
- * Sends one digest. The email goes first and only then are the notifications marked, so a failure
- * leaves them pending for a retry; marking makes a repeated job send nothing twice.
- */
 export async function sendDigest(
   db: Db,
   config: Config,
   userId: string,
   now = new Date(),
 ): Promise<DigestResult> {
-  if ((await emailsSentToday(db, now)) >= DIGEST_DAILY_BUDGET) return 'over_budget';
-  const { handled, email } = await buildDigest(db, config, userId, now);
-  if (email) await sendEmail(config, email, db);
-  if (handled.length) {
-    await db.update(notification).set({ emailedAt: now }).where(inArray(notification.id, handled));
-  }
+  const { included, email } = await buildDigest(db, config, userId, now);
   if (!email) return 'nothing';
-  await db
-    .insert(userPreference)
-    .values({ userId, lastDigestAt: now })
-    .onConflictDoUpdate({ target: userPreference.userId, set: { lastDigestAt: now } });
+  // The budget slot is reserved atomically before sending (see reserveEmailSlot).
+  if (!(await sendEmail(config, email, db, DIGEST_DAILY_BUDGET))) return 'over_budget';
+  await db.batch([
+    db.update(notification).set({ emailedAt: now }).where(inArray(notification.id, included)),
+    db
+      .insert(userPreference)
+      .values({ userId, lastDigestAt: now })
+      .onConflictDoUpdate({ target: userPreference.userId, set: { lastDigestAt: now } }),
+  ]);
   return 'sent';
 }
 

@@ -15,19 +15,37 @@ const DAY = 24 * 60 * 60 * 1000;
  * - events a crashed room saved but never broadcast are published (the outbox safety net).
  */
 export async function cleanup(env: Env, db: Db, now = new Date()) {
-  const orphans = await db
-    .select({ id: file.id, r2Key: file.r2Key })
+  // Rows first, then objects. A row is only deleted if it is STILL unattached (someone may have
+  // sent it since we looked), and only the objects of rows actually deleted are removed. If the
+  // storage delete then fails, the worst case is an unreferenced object (a small, logged storage
+  // leak), never a database row pointing at a file that no longer exists.
+  const candidates = await db
+    .select({ id: file.id })
     .from(file)
     .where(and(isNull(file.messageId), lt(file.createdAt, new Date(now.getTime() - DAY))))
     .limit(100);
-  if (orphans.length) {
-    await env.FILES.delete(orphans.map((o) => o.r2Key));
-    await db.delete(file).where(
-      inArray(
-        file.id,
-        orphans.map((o) => o.id),
-      ),
-    );
+  let orphanFiles = 0;
+  if (candidates.length) {
+    const deleted = await db
+      .delete(file)
+      .where(
+        and(
+          inArray(
+            file.id,
+            candidates.map((c) => c.id),
+          ),
+          isNull(file.messageId),
+        ),
+      )
+      .returning({ r2Key: file.r2Key });
+    orphanFiles = deleted.length;
+    if (deleted.length) {
+      try {
+        await env.FILES.delete(deleted.map((d) => d.r2Key));
+      } catch (err) {
+        console.error('orphan upload objects could not be deleted', deleted.length, err);
+      }
+    }
   }
 
   await db.delete(verification).where(lt(verification.expiresAt, now));
@@ -39,7 +57,7 @@ export async function cleanup(env: Env, db: Db, now = new Date()) {
   `);
   for (const { conversationId } of stuck) await roomFor(env, conversationId).publishPending(conversationId);
 
-  return { orphanFiles: orphans.length, republished: stuck.length };
+  return { orphanFiles, republished: stuck.length };
 }
 
 /** Cron: once an hour. */
@@ -59,7 +77,11 @@ export async function queue(batch: MessageBatch<DigestJob>, env: Env) {
   const config = getConfig(env);
   for (const message of batch.messages) {
     try {
-      await sendDigest(db, config, message.body.userId);
+      const result = await sendDigest(db, config, message.body.userId);
+      if (result === 'over_budget') {
+        // Acknowledged on purpose: the notifications stay pending and tomorrow's run picks them up.
+        console.warn('digest deferred: daily email budget used up');
+      }
       message.ack();
     } catch (err) {
       console.error('digest failed', err instanceof AppError ? err.code : err);
