@@ -21,6 +21,8 @@
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:check && npm test && npm run build"
   },
   "dependencies": {
+    "@hono/zod-validator": "^0.9.1",
+    "better-auth": "^1.7.27",
     "drizzle-orm": "^0.45.4",
     "hono": "^4.13.20",
     "zod": "^4.6.7"

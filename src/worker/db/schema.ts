@@ -92,21 +92,52 @@ export const verification = sqliteTable(
   (t) => [index('verification_identifier').on(t.identifier)],
 );
 
+// Better Auth's rate-limit counters. Kept in D1 because a Worker's memory is not shared between
+// requests, so an in-memory limiter would protect nothing.
+export const rateLimit = sqliteTable('rate_limit', {
+  id: text('id').primaryKey(),
+  key: text('key').notNull().unique(),
+  count: integer('count').notNull(),
+  lastRequest: integer('last_request').notNull(),
+});
+
+// Security-relevant events for the owner's Security page. Never holds codes, tokens or message text.
+export const auditLog = sqliteTable(
+  'audit_log',
+  {
+    id: text('id').primaryKey(),
+    actorId: text('actor_id'), // null when nobody is signed in (e.g. a blocked sign-up)
+    action: text('action').notNull(),
+    targetId: text('target_id'),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    meta: text('meta', { mode: 'json' }).$type<Record<string, unknown>>(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('audit_log_created').on(t.createdAt), index('audit_log_actor').on(t.actorId)],
+);
+
 /* ---------------------------------------------------------------------------------------------
  * Workspace and membership. One workspace per installation, but every conversation still names
  * its workspace so isolation is explicit in the schema and in every query.
  * ------------------------------------------------------------------------------------------- */
 
-export const workspace = sqliteTable('workspace', {
-  id: text('id').primaryKey(),
-  name: text('name').notNull(),
-  logoFileId: text('logo_file_id'),
-  accent: text('accent'),
-  allowMemberGuestInvites: integer('allow_member_guest_invites', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  createdAt: createdAt(),
-});
+export const workspace = sqliteTable(
+  'workspace',
+  {
+    id: text('id').primaryKey(),
+    name: text('name').notNull(),
+    logoFileId: text('logo_file_id'),
+    accent: text('accent'),
+    allowMemberGuestInvites: integer('allow_member_guest_invites', { mode: 'boolean' })
+      .notNull()
+      .default(false),
+    createdAt: createdAt(),
+  },
+  // A unique index on a constant: the database itself allows exactly one workspace per installation,
+  // so two simultaneous first-run setups cannot create two.
+  () => [uniqueIndex('workspace_singleton').on(sql`(1)`)],
+);
 
 export const workspaceRoles = ['owner', 'admin', 'member', 'guest'] as const;
 

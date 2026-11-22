@@ -1,0 +1,16 @@
+# Copy to .dev.vars for local development. In production these are Worker secrets.
+
+# The full URL Huddle is served from (no trailing slash).
+APP_URL=http://localhost:8787
+# The first person to sign in with this email becomes the workspace owner.
+ADMIN_EMAIL=
+# At least 32 random characters. Generate one with: npx @better-auth/cli secret
+BETTER_AUTH_SECRET=
+
+# Optional: email delivery through Resend (needs a verified sending domain).
+RESEND_API_KEY=
+EMAIL_FROM=
+
+# Optional: "Sign in with Google".
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
