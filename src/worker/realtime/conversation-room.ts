@@ -2,7 +2,16 @@ import { DurableObject } from 'cloudflare:workers';
 import { and, asc, eq, gt, isNull, sql } from 'drizzle-orm';
 import type { ConversationEvent, MessageDto } from '../../shared/events';
 import { getDb, type Db } from '../db/client';
-import { conversation, conversationEvent, conversationMember, message } from '../db/schema';
+import {
+  conversation,
+  conversationEvent,
+  conversationMember,
+  message,
+  messageMention,
+  notification,
+  reaction,
+} from '../db/schema';
+import { parseMentions } from '../../shared/mentions';
 import { AppError, forbidden, notFound } from '../lib/errors';
 import { newId } from '../lib/id';
 import { hubFor } from './workspace-hub';
@@ -10,6 +19,7 @@ import { hubFor } from './workspace-hub';
 const TYPING_THROTTLE_MS = 3000;
 const MAX_CLIENT_FRAME = 1024;
 const REPLAY_LIMIT = 500;
+const MAX_DISTINCT_REACTIONS = 50;
 
 /** Ephemeral frames that are never stored and carry no seq. */
 export type RoomSignal =
@@ -161,16 +171,18 @@ export class ConversationRoom extends DurableObject<Env> {
     try {
       const hub = hubFor(this.env);
       if (event.type === 'message.created') {
-        const members = await this.db
-          .select({ userId: conversationMember.userId })
-          .from(conversationMember)
-          .where(eq(conversationMember.conversationId, event.conversationId));
+        const memberIds = await this.memberIds(event.conversationId);
+        const { mentioned } = this.resolveMentions(
+          event.data.message.body,
+          memberIds,
+          event.data.message.authorId,
+        );
         await hub.activity({
           conversationId: event.conversationId,
           seq: event.seq,
           authorId: event.data.message.authorId,
-          memberIds: members.map((m) => m.userId),
-          mentionedIds: [],
+          memberIds,
+          mentionedIds: [...mentioned],
         });
       } else if (event.type === 'member.joined' || event.type === 'member.left') {
         await hub.conversationChanged(event.conversationId, [event.data.userId]);
@@ -178,6 +190,90 @@ export class ConversationRoom extends DurableObject<Env> {
     } catch (err) {
       console.error('hub notification failed', err);
     }
+  }
+
+  private async memberIds(conversationId: string): Promise<string[]> {
+    const rows = await this.db
+      .select({ userId: conversationMember.userId })
+      .from(conversationMember)
+      .where(eq(conversationMember.conversationId, conversationId));
+    return rows.map((r) => r.userId);
+  }
+
+  /**
+   * Who a message mentions. Only members of this conversation count, so mentioning an outsider in a
+   * private channel stores nothing and notifies nobody (and leaks nothing). <@channel> and <@here>
+   * reach every member; the author is never notified about their own message.
+   */
+  private resolveMentions(body: string, memberIds: string[], authorId: string | null) {
+    const parsed = parseMentions(body);
+    const members = new Set(memberIds);
+    const direct = parsed.userIds.filter((id) => members.has(id));
+    const targets = [...direct, ...(parsed.channel ? ['channel'] : []), ...(parsed.here ? ['here'] : [])];
+    const mentioned = new Set(parsed.channel || parsed.here ? memberIds : direct);
+    if (authorId) mentioned.delete(authorId);
+    return { targets, mentioned };
+  }
+
+  private async conversationKind(conversationId: string) {
+    const row = await this.db.query.conversation.findFirst({
+      where: eq(conversation.id, conversationId),
+      columns: { kind: true },
+    });
+    if (!row) throw notFound('That conversation');
+    return row.kind;
+  }
+
+  /**
+   * Notification rows (for the Mentions view and email digests): mentions, every other member of a
+   * DM, and the people already in a thread when it gets a reply. One row per person per message;
+   * the unique key makes a repeat harmless.
+   */
+  private async notificationsFor(input: {
+    conversationId: string;
+    authorId: string;
+    body: string;
+    parentId: string | null;
+  }) {
+    const memberIds = await this.memberIds(input.conversationId);
+    const { targets, mentioned } = this.resolveMentions(input.body, memberIds, input.authorId);
+    const notify = new Map<string, 'mention' | 'dm' | 'thread_reply'>();
+    for (const id of mentioned) notify.set(id, 'mention');
+
+    const kind = await this.conversationKind(input.conversationId);
+    if (kind === 'dm' || kind === 'group_dm') {
+      for (const id of memberIds) if (id !== input.authorId && !notify.has(id)) notify.set(id, 'dm');
+    }
+    if (input.parentId) {
+      const participants = await this.db.all<{ userId: string }>(sql`
+        SELECT author_id AS userId FROM message WHERE id = ${input.parentId} AND author_id IS NOT NULL
+        UNION SELECT author_id FROM message WHERE parent_id = ${input.parentId} AND author_id IS NOT NULL`);
+      for (const { userId } of participants) {
+        if (userId !== input.authorId && !notify.has(userId) && memberIds.includes(userId)) {
+          notify.set(userId, 'thread_reply');
+        }
+      }
+    }
+    return { targets, notify };
+  }
+
+  private mentionAndNotificationRows(
+    messageId: string,
+    targets: string[],
+    notify: Map<string, 'mention' | 'dm' | 'thread_reply'>,
+    at: Date,
+  ): BatchItem[] {
+    return [
+      ...targets.map((target) =>
+        this.db.insert(messageMention).values({ messageId, target }).onConflictDoNothing(),
+      ),
+      ...[...notify].map(([userId, kind]) =>
+        this.db
+          .insert(notification)
+          .values({ id: newId(), userId, messageId, kind, createdAt: at })
+          .onConflictDoNothing(),
+      ),
+    ];
   }
 
   /** Sends to every socket connected to this conversation. */
@@ -231,10 +327,18 @@ export class ConversationRoom extends DurableObject<Env> {
           parentId = parent.id;
         }
 
+        const id = newId();
+        const { targets, notify } = await this.notificationsFor({
+          conversationId: input.conversationId,
+          authorId: input.authorId,
+          body: input.body,
+          parentId,
+        });
+
         let created!: MessageDto;
         await this.commit(input.conversationId, (seq, at) => {
           const row = {
-            id: newId(),
+            id,
             conversationId: input.conversationId,
             seq,
             authorId: input.authorId,
@@ -254,6 +358,7 @@ export class ConversationRoom extends DurableObject<Env> {
             event: { type: 'message.created', data: { message: created } },
             changes: [
               this.db.insert(message).values(row),
+              ...this.mentionAndNotificationRows(id, targets, notify, at),
               ...(parentId
                 ? [
                     this.db
@@ -280,6 +385,14 @@ export class ConversationRoom extends DurableObject<Env> {
       attempt(async () => {
         const target = await this.findLive(input.conversationId, input.messageId);
         if (target.authorId !== input.actorId) throw forbidden('You can only edit your own messages.');
+        // Mentions follow the new text: removed ones go, newly added people are notified once.
+        const { targets, notify } = await this.notificationsFor({
+          conversationId: input.conversationId,
+          authorId: input.actorId,
+          body: input.body,
+          parentId: null,
+        });
+        for (const [userId, kind] of notify) if (kind !== 'mention') notify.delete(userId);
         let editedAt!: Date;
         await this.commit(input.conversationId, (_seq, at) => {
           editedAt = at;
@@ -293,6 +406,8 @@ export class ConversationRoom extends DurableObject<Env> {
                 .update(message)
                 .set({ body: input.body, editedAt: at })
                 .where(eq(message.id, target.id)),
+              this.db.delete(messageMention).where(eq(messageMention.messageId, target.id)),
+              ...this.mentionAndNotificationRows(target.id, targets, notify, at),
             ],
           };
         });
@@ -332,6 +447,60 @@ export class ConversationRoom extends DurableObject<Env> {
           ],
         }));
         return null;
+      }),
+    );
+  }
+
+  /**
+   * Adds or removes one person's emoji on a message. Repeating an add (or a remove) changes nothing
+   * and records no event, so double-clicks and retries are harmless.
+   */
+  async react(input: {
+    conversationId: string;
+    messageId: string;
+    userId: string;
+    emoji: string;
+    add: boolean;
+  }): Promise<RoomResult<{ changed: boolean }>> {
+    return this.serialize(() =>
+      attempt(async () => {
+        const target = await this.findLive(input.conversationId, input.messageId);
+        const mine = and(
+          eq(reaction.messageId, target.id),
+          eq(reaction.userId, input.userId),
+          eq(reaction.emoji, input.emoji),
+        );
+        const exists = Boolean(
+          await this.db.query.reaction.findFirst({ where: mine, columns: { emoji: true } }),
+        );
+        if (exists === input.add) return { changed: false };
+
+        if (input.add) {
+          const kinds = await this.db.all<{ n: number }>(sql`
+            SELECT count(DISTINCT emoji) AS n FROM reaction WHERE message_id = ${target.id}
+              AND emoji <> ${input.emoji}`);
+          if ((kinds[0]?.n ?? 0) >= MAX_DISTINCT_REACTIONS) {
+            throw new AppError(
+              409,
+              'too_many_reactions',
+              'This message has as many different reactions as it can hold.',
+            );
+          }
+        }
+        await this.commit(input.conversationId, (_seq, at) => ({
+          event: {
+            type: input.add ? 'reaction.added' : 'reaction.removed',
+            data: { messageId: target.id, userId: input.userId, emoji: input.emoji },
+          },
+          changes: [
+            input.add
+              ? this.db
+                  .insert(reaction)
+                  .values({ messageId: target.id, userId: input.userId, emoji: input.emoji, createdAt: at })
+              : this.db.delete(reaction).where(mine),
+          ],
+        }));
+        return { changed: true };
       }),
     );
   }

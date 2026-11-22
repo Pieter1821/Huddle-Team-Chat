@@ -1,12 +1,12 @@
-import { and, asc, desc, eq, inArray, isNull, lt, or, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, inArray, isNull, lt, lte, or, sql } from 'drizzle-orm';
 import { Hono, type Context } from 'hono';
 import { z } from 'zod';
-import { conversation, conversationMember, message, user } from '../../db/schema';
+import { conversation, conversationMember, message, notification, user } from '../../db/schema';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody, queryParams } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
-import { toMessageDto } from '../../realtime/conversation-room';
+import { EMOJI_PATTERN, withReactions } from './reactions';
 import { isAdmin } from '../access/access';
 import {
   activeMembers,
@@ -327,6 +327,23 @@ export const conversationRoutes = new Hono<AppEnv>()
       .where(
         and(eq(conversationMember.conversationId, conv.id), eq(conversationMember.userId, actor.userId)),
       );
+    // What you have read no longer needs an email digest.
+    await db
+      .update(notification)
+      .set({ readAt: new Date() })
+      .where(
+        and(
+          eq(notification.userId, actor.userId),
+          isNull(notification.readAt),
+          inArray(
+            notification.messageId,
+            db
+              .select({ id: message.id })
+              .from(message)
+              .where(and(eq(message.conversationId, conv.id), lte(message.seq, seq))),
+          ),
+        ),
+      );
     return c.json({ lastReadSeq: seq });
   })
 
@@ -358,7 +375,7 @@ export const conversationRoutes = new Hono<AppEnv>()
         .orderBy(desc(message.seq))
         .limit(limit);
       return c.json({
-        messages: rows.reverse().map(toMessageDto),
+        messages: await withReactions(db, rows.reverse()),
         lastSeq: conv.lastSeq,
         hasMore: rows.length === limit,
       });
@@ -381,7 +398,8 @@ export const conversationRoutes = new Hono<AppEnv>()
       .from(message)
       .where(eq(message.parentId, parent.id))
       .orderBy(asc(message.seq));
-    return c.json({ parent: toMessageDto(parent), replies: replies.map(toMessageDto) });
+    const [withCounts, ...rest] = await withReactions(db, [parent, ...replies]);
+    return c.json({ parent: withCounts, replies: rest });
   })
 
   .post(
@@ -427,6 +445,19 @@ export const conversationRoutes = new Hono<AppEnv>()
     );
     return c.json({ message: edited });
   })
+
+  .post(
+    '/:id/messages/:messageId/reactions',
+    jsonBody(z.object({ emoji: z.string().min(1).max(32).regex(EMOJI_PATTERN, 'Reactions must be emoji.') })),
+    async (c) => react(c, c.req.valid('json').emoji, true),
+  )
+  .delete(
+    '/:id/messages/:messageId/reactions',
+    queryParams(
+      z.object({ emoji: z.string().min(1).max(32).regex(EMOJI_PATTERN, 'Reactions must be emoji.') }),
+    ),
+    async (c) => react(c, c.req.valid('query').emoji, false),
+  )
 
   .delete('/:id/messages/:messageId', async (c) => {
     const { db, actor } = c.var;
@@ -476,4 +507,21 @@ async function setArchived(c: Context<AppEnv, '/:id'>, archived: boolean) {
     .where(eq(conversation.id, conv.id));
   await roomFor(c.env, conv.id).recordEvent(conv.id, { type: 'conversation.updated', data: { archived } });
   return c.json({ archived });
+}
+
+/** Reacting follows the posting rules: you must be able to post in the conversation. */
+async function react(c: Context<AppEnv, '/:id/messages/:messageId/reactions'>, emoji: string, add: boolean) {
+  const { db, actor } = c.var;
+  const conv = await postableConversation(db, actor, c.req.param('id'));
+  if (!(await isMember(db, conv.id, actor.userId))) throw forbidden('Join the channel to react.');
+  const result = unwrap(
+    await roomFor(c.env, conv.id).react({
+      conversationId: conv.id,
+      messageId: c.req.param('messageId'),
+      userId: actor.userId,
+      emoji,
+      add,
+    }),
+  );
+  return c.json(result);
 }

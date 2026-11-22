@@ -1351,6 +1351,149 @@
           ]
         },
         {
+          "name": "React with an emoji",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages/{{messageId}}/reactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages", "{{messageId}}", "reactions"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emoji\": \"👍\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Adding the same reaction twice changes nothing ({ changed: false })."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Reacted (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Remove the reaction",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages/{{messageId}}/reactions?emoji=%F0%9F%91%8D",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages", "{{messageId}}", "reactions"],
+              "query": [
+                {
+                  "key": "emoji",
+                  "value": "%F0%9F%91%8D"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Removed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Mention the invitee",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"<@{{memberId}}> can you check the section?\",\n  \"clientMsgId\": \"{{}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Mentions are <@userId> tokens (<@channel> and <@here> for everyone). Only members of the conversation count."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Sent (201)', () => pm.response.to.have.status(201));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My mentions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/activity/mentions",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity", "mentions"]
+            },
+            "description": "Messages that mention you, newest first, from conversations you are still in. Sign in as the invitee to see the mention above."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "My threads",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/activity/threads",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "activity", "threads"]
+            },
+            "description": "Threads you started or replied to, most recent reply first."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
           "name": "Delete the message",
           "request": {
             "method": "DELETE",

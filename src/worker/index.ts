@@ -4,6 +4,7 @@ import { secureHeaders } from 'hono/secure-headers';
 import { AppError } from './lib/errors';
 import { withServices, type AppEnv } from './middleware/context';
 import { requireSameOrigin } from './middleware/origin';
+import { activityRoutes } from './modules/activity/routes';
 import { auditRoutes } from './modules/audit/routes';
 import { conversationRoutes } from './modules/conversations/routes';
 import { realtimeRoutes } from './modules/realtime/routes';
@@ -50,6 +51,7 @@ app.route('/members', memberRoutes);
 app.route('/admin/audit', auditRoutes);
 app.route('/conversations', conversationRoutes);
 app.route('/realtime', realtimeRoutes);
+app.route('/activity', activityRoutes);
 
 app.notFound((c) => c.json({ error: { code: 'not_found', message: 'No such endpoint.' } }, 404));
 
