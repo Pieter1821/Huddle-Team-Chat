@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.wrangler/
+.dev.vars
+.env*
+!.dev.vars.example
+.taste-skill/
+playwright-report/
+test-results/
+
+# no Markdown or docs in git: architecture and specs live outside the repo
+*.md
+docs/
+
+design/
