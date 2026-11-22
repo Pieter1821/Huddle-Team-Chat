@@ -13,6 +13,8 @@ import {
 } from './modules/notifications/routes';
 import { activityRoutes } from './modules/activity/routes';
 import { auditRoutes } from './modules/audit/routes';
+import { brandingRoutes, logoRoutes } from './modules/branding/routes';
+import { conversationWebhookRoutes, incomingHookRoutes, webhookRoutes } from './modules/webhooks/routes';
 import { conversationRoutes } from './modules/conversations/routes';
 import { conversationFileRoutes, fileRoutes } from './modules/files/routes';
 import { realtimeRoutes } from './modules/realtime/routes';
@@ -52,6 +54,8 @@ app.on(['GET', 'POST'], '/auth/*', (c) => c.var.auth.handler(c.req.raw));
 // Mail apps send one-click unsubscribes without an Origin, so this route sits before the guard; it is
 // protected by its signed link instead.
 app.route('/unsubscribe', unsubscribeRoutes);
+// Other tools post here with no session or Origin; the secret token in the URL is the credential.
+app.route('/hooks', incomingHookRoutes);
 
 // Everything else: state-changing requests must come from Huddle's own origin (CSRF protection).
 app.use(requireSameOrigin);
@@ -60,12 +64,16 @@ app.route('/setup', setupRoutes);
 app.route('/me/preferences', preferenceRoutes);
 app.route('/me', meRoutes);
 app.route('/workspace', workspaceRoutes);
+app.route('/workspace', logoRoutes);
+app.route('/branding', brandingRoutes);
+app.route('/webhooks', webhookRoutes);
 app.route('/invitations', invitationRoutes);
 app.route('/members', memberRoutes);
 app.route('/admin/audit', auditRoutes);
 app.route('/conversations', conversationRoutes);
 app.route('/conversations', conversationFileRoutes);
 app.route('/conversations', conversationNotificationRoutes);
+app.route('/conversations', conversationWebhookRoutes);
 app.route('/files', fileRoutes);
 app.route('/search', searchRoutes);
 app.route('/realtime', realtimeRoutes);

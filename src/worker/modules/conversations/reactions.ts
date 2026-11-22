@@ -2,7 +2,7 @@ import { asc, inArray } from 'drizzle-orm';
 import type { MessageDto, ReactionSummary } from '../../../shared/events';
 import type { Db } from '../../db/client';
 import type { message } from '../../db/schema';
-import { file, reaction } from '../../db/schema';
+import { file, reaction, webhook } from '../../db/schema';
 import { toMessageDto } from '../../realtime/conversation-room';
 import { toFileDto } from '../files/dto';
 
@@ -21,6 +21,18 @@ export async function withReactions(db: Db, rows: MessageRow[]): Promise<Message
       ])
     : [[], []];
 
+  const webhookIds = [...new Set(rows.map((r) => r.webhookId).filter((id): id is string => Boolean(id)))];
+  const webhookNames = new Map(
+    webhookIds.length
+      ? (
+          await db
+            .select({ id: webhook.id, name: webhook.name })
+            .from(webhook)
+            .where(inArray(webhook.id, webhookIds))
+        ).map((w) => [w.id, w.name])
+      : [],
+  );
+
   const byMessage = new Map<string, Map<string, string[]>>();
   for (const r of all) {
     const emojis = byMessage.get(r.messageId) ?? new Map<string, string[]>();
@@ -35,7 +47,8 @@ export async function withReactions(db: Db, rows: MessageRow[]): Promise<Message
       : [];
     // A deleted message shows no files (and they can no longer be downloaded).
     const files = row.deletedAt ? [] : attached.filter((f) => f.messageId === row.id).map(toFileDto);
-    return { ...toMessageDto(row), reactions, files };
+    const webhookName = row.webhookId ? (webhookNames.get(row.webhookId) ?? null) : null;
+    return { ...toMessageDto(row), reactions, files, webhookName };
   });
 }
 

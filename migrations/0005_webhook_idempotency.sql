@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `message_webhook_client_id` ON `message` (`webhook_id`,`client_msg_id`);

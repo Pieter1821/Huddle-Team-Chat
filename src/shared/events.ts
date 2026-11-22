@@ -16,6 +16,10 @@ export type MessageDto = {
   createdAt: string;
   /** Lets the sender match the server's copy to the message it showed as "sending". */
   clientMsgId: string | null;
+  /** Set when the message came from an incoming webhook (then authorId is null). */
+  webhookId: string | null;
+  /** The webhook's display name, for showing who posted it. */
+  webhookName?: string | null;
   /** Present in history and thread responses; live updates arrive as reaction events. */
   reactions?: ReactionSummary[];
   /** Files attached to the message (download through /api/files/:id). */

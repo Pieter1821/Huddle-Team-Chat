@@ -6,6 +6,7 @@ import { forbidden } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
+import { accentSchema } from '../branding/routes';
 
 export const displayName = z.string().trim().min(1).max(80);
 
@@ -39,6 +40,8 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
       .object({
         name: z.string().trim().min(1).max(80).optional(),
         allowMemberGuestInvites: z.boolean().optional(),
+        // null resets to Huddle's default teal.
+        accent: accentSchema.nullable().optional(),
       })
       .refine((v) => Object.keys(v).length > 0, 'Nothing to update.'),
   ),
@@ -53,12 +56,14 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
         ...(body.allowMemberGuestInvites !== undefined
           ? { allowMemberGuestInvites: body.allowMemberGuestInvites }
           : {}),
+        ...(body.accent !== undefined ? { accent: body.accent } : {}),
       })
       .where(eq(workspace.id, actor.workspaceId))
       .returning({
         id: workspace.id,
         name: workspace.name,
         allowMemberGuestInvites: workspace.allowMemberGuestInvites,
+        accent: workspace.accent,
       });
     return c.json({ workspace: updated });
   },
