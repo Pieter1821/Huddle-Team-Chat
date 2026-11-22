@@ -4,6 +4,13 @@ import { secureHeaders } from 'hono/secure-headers';
 import { AppError } from './lib/errors';
 import { withServices, type AppEnv } from './middleware/context';
 import { requireSameOrigin } from './middleware/origin';
+import { queue, scheduled } from './jobs';
+import type { DigestJob } from './modules/notifications/digest';
+import {
+  conversationNotificationRoutes,
+  preferenceRoutes,
+  unsubscribeRoutes,
+} from './modules/notifications/routes';
 import { activityRoutes } from './modules/activity/routes';
 import { auditRoutes } from './modules/audit/routes';
 import { conversationRoutes } from './modules/conversations/routes';
@@ -42,10 +49,15 @@ app.use(withServices);
 // Better Auth owns /api/auth/* and checks the Origin of those requests itself (trustedOrigins).
 app.on(['GET', 'POST'], '/auth/*', (c) => c.var.auth.handler(c.req.raw));
 
+// Mail apps send one-click unsubscribes without an Origin, so this route sits before the guard; it is
+// protected by its signed link instead.
+app.route('/unsubscribe', unsubscribeRoutes);
+
 // Everything else: state-changing requests must come from Huddle's own origin (CSRF protection).
 app.use(requireSameOrigin);
 
 app.route('/setup', setupRoutes);
+app.route('/me/preferences', preferenceRoutes);
 app.route('/me', meRoutes);
 app.route('/workspace', workspaceRoutes);
 app.route('/invitations', invitationRoutes);
@@ -53,6 +65,7 @@ app.route('/members', memberRoutes);
 app.route('/admin/audit', auditRoutes);
 app.route('/conversations', conversationRoutes);
 app.route('/conversations', conversationFileRoutes);
+app.route('/conversations', conversationNotificationRoutes);
 app.route('/files', fileRoutes);
 app.route('/search', searchRoutes);
 app.route('/realtime', realtimeRoutes);
@@ -76,4 +89,8 @@ app.onError((err, c) => {
 export { ConversationRoom } from './realtime/conversation-room';
 export { WorkspaceHub } from './realtime/workspace-hub';
 
-export default app;
+export default {
+  fetch: app.fetch,
+  scheduled,
+  queue,
+} satisfies ExportedHandler<Env, DigestJob>;

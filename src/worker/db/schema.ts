@@ -408,9 +408,16 @@ export const notification = sqliteTable(
     createdAt: createdAt(),
     readAt: timestamp('read_at'),
     emailedAt: timestamp('emailed_at'),
+    // Set when a digest job claims this notification, before sending: a concurrent job cannot claim
+    // it again, and a retry reuses the same claim (and so the same idempotency key and content).
+    digestId: text('digest_id'),
+    claimedAt: timestamp('claimed_at'),
   },
   (t) => [
     uniqueIndex('notification_unique').on(t.userId, t.messageId, t.kind),
+    index('notification_claimed')
+      .on(t.digestId)
+      .where(sql`${t.digestId} IS NOT NULL AND ${t.emailedAt} IS NULL`),
     index('notification_pending')
       .on(t.userId)
       .where(sql`${t.readAt} IS NULL AND ${t.emailedAt} IS NULL`),
@@ -429,7 +436,16 @@ export const userPreference = sqliteTable(
       .default('hourly'),
     digestDelayMin: integer('digest_delay_min').notNull().default(120),
     timezone: text('timezone').notNull().default('UTC'),
+    // Do Not Disturb: no digests (or pushes) before this moment.
     pausedUntil: timestamp('paused_until'),
+    lastDigestAt: timestamp('last_digest_at'),
   },
   (t) => [check('user_preference_digest', sql`${t.digest} IN ('hourly','daily','off')`)],
 );
+
+// Emails sent per UTC day, counted by Huddle itself: the free email plan allows about 100 a day, and
+// digests stop early so sign-in codes always have room.
+export const emailUsage = sqliteTable('email_usage', {
+  day: text('day').primaryKey(), // YYYY-MM-DD (UTC)
+  sent: integer('sent').notNull().default(0),
+});

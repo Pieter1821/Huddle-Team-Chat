@@ -19,7 +19,17 @@ export async function api(path: string, opts: Options = {}) {
     ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
   });
   const text = await res.text();
-  return { res, status: res.status, json: text ? JSON.parse(text) : null };
+  return { res, status: res.status, json: parseJson(text), text };
+}
+
+/** JSON body, or null for empty or non-JSON responses (e.g. the unsubscribe confirmation page). */
+function parseJson(text: string): any {
+  if (!text) return null;
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
 }
 
 /** Collects emails "sent" in local mode (printed through console.warn) so tests can read codes. */
@@ -114,6 +124,7 @@ export async function addMember(
 export async function resetDb() {
   const tables = [
     'audit_log',
+    'email_usage',
     'rate_limit',
     'reaction',
     'message_mention',

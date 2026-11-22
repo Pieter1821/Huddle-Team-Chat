@@ -22,6 +22,20 @@
       "when": 1795363216943,
       "tag": "0002_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1795369584298,
+      "tag": "0003_notifications",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1795371405299,
+      "tag": "0004_digest_claims",
+      "breakpoints": true
     }
   ]
 }

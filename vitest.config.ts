@@ -16,7 +16,6 @@ export default defineConfig(async () => {
             APP_URL: 'http://localhost:8787',
             ADMIN_EMAIL: 'owner@example.com',
             BETTER_AUTH_SECRET: 'test-secret-that-is-long-enough-for-better-auth',
-            RESEND_API_KEY: '',
             EMAIL_FROM: '',
             GOOGLE_CLIENT_ID: '',
             GOOGLE_CLIENT_SECRET: '',
