@@ -1,4 +1,5 @@
 import js from '@eslint/js';
+import reactHooks from 'eslint-plugin-react-hooks';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
@@ -17,7 +18,11 @@ export default tseslint.config(
   ...tseslint.configs.recommendedTypeChecked,
   {
     languageOptions: {
-      parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+      // Two TypeScript projects: the Worker (tsconfig.json) and the browser app (tsconfig.web.json).
+      parserOptions: {
+        project: ['./tsconfig.json', './tsconfig.web.json'],
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
     rules: {
       '@typescript-eslint/no-explicit-any': 'error',
@@ -25,6 +30,11 @@ export default tseslint.config(
       '@typescript-eslint/no-floating-promises': 'error',
       'no-console': ['error', { allow: ['warn', 'error'] }],
     },
+  },
+  {
+    // React's rules of hooks for the web app (hooks only at the top level, complete dependencies).
+    files: ['src/web/**/*.{ts,tsx}'],
+    ...reactHooks.configs.flat.recommended,
   },
   {
     // Tests poke at raw JSON responses; their assertions catch wrong shapes. App code stays strict.
