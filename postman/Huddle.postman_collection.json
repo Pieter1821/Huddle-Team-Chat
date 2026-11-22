@@ -1554,6 +1554,193 @@
       ]
     },
     {
+      "name": "8c. Files and search",
+      "description": "As owner. For the upload, open the request, go to Body → binary and pick any file (Postman sets Content-Length). The file name travels in X-File-Name.",
+      "item": [
+        {
+          "name": "Upload a file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "X-File-Name",
+                "value": "VW-section-B-B.pdf"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/files",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "files"]
+            },
+            "body": {
+              "mode": "file",
+              "file": {
+                "src": ""
+              }
+            },
+            "description": "Up to 25 MB. The real type is detected from the file bytes, not its name. Returns a file id to attach to a message."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Uploaded (201)', () => pm.response.to.have.status(201));",
+                  "pm.environment.set('fileId', pm.response.json().file.id);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Send a message with the file",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/messages",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "messages"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"body\": \"Kitchen section is up\",\n  \"clientMsgId\": \"{{}}\",\n  \"fileIds\": [\n    \"{{fileId}}\"\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "Text may be empty when files are attached. Only your own unsent uploads in this conversation can be attached."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Sent with file (201)', () => pm.response.to.have.status(201));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Files in this channel",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/conversations/{{channelId}}/files",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "conversations", "{{channelId}}", "files"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Listed (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Download the file",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/files/{{fileId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "files", "{{fileId}}"]
+            },
+            "description": "Checked on every download: you must be able to read the conversation, and the message must still exist. Add ?inline=1 to view images and PDFs in the browser."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Downloaded (200)', () => pm.response.to.have.status(200));",
+                  "pm.test('Never sniffed', () => pm.expect(pm.response.headers.get('X-Content-Type-Options')).to.eql('nosniff'));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search everything",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search?q=kitchen",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "kitchen"
+                }
+              ]
+            },
+            "description": "Messages (with highlighted snippets), files, channels and people you are allowed to see. Filters: in=<conversation id>, from=<user id>, has=file, after=YYYY-MM-DD, before=YYYY-MM-DD."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Searched (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Search with filters",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/search?q=section&in={{channelId}}&has=file",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "search"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "section"
+                },
+                {
+                  "key": "in",
+                  "value": "{{channelId}}"
+                },
+                {
+                  "key": "has",
+                  "value": "file"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": ["pm.test('Searched (200)', () => pm.response.to.have.status(200));"]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "9. Must fail",
       "description": "As owner. Every request here should be refused; a green test means the rule held.",
       "item": [

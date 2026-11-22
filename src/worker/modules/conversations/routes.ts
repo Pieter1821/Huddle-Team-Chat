@@ -405,12 +405,19 @@ export const conversationRoutes = new Hono<AppEnv>()
   .post(
     '/:id/messages',
     jsonBody(
-      z.object({
-        body: messageBody,
-        clientMsgId,
-        parentId: z.string().min(1).optional(),
-        alsoInChannel: z.boolean().optional(),
-      }),
+      z
+        .object({
+          // Text may be empty when the message carries files.
+          body: z.string().trim().max(8000).default(''),
+          clientMsgId,
+          parentId: z.string().min(1).optional(),
+          alsoInChannel: z.boolean().optional(),
+          fileIds: z.array(z.string().min(1)).max(10).optional(),
+        })
+        .refine((v) => v.body.length > 0 || (v.fileIds?.length ?? 0) > 0, {
+          message: 'A message cannot be empty.',
+          path: ['body'],
+        }),
     ),
     async (c) => {
       const { db, actor } = c.var;
@@ -426,6 +433,7 @@ export const conversationRoutes = new Hono<AppEnv>()
           clientMsgId: body.clientMsgId,
           parentId: body.parentId,
           alsoInChannel: body.alsoInChannel,
+          fileIds: body.fileIds,
         }),
       );
       return c.json({ message: result.message }, result.created ? 201 : 200);

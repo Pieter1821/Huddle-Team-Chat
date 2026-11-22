@@ -18,7 +18,11 @@ export type MessageDto = {
   clientMsgId: string | null;
   /** Present in history and thread responses; live updates arrive as reaction events. */
   reactions?: ReactionSummary[];
+  /** Files attached to the message (download through /api/files/:id). */
+  files?: FileDto[];
 };
+
+export type FileDto = { id: string; name: string; mime: string; size: number; createdAt: string };
 
 export type ReactionSummary = { emoji: string; count: number; userIds: string[] };
 

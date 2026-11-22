@@ -1,17 +1,19 @@
 import { DurableObject } from 'cloudflare:workers';
-import { and, asc, eq, gt, isNull, sql } from 'drizzle-orm';
+import { and, asc, eq, gt, inArray, isNull, sql } from 'drizzle-orm';
 import type { ConversationEvent, MessageDto } from '../../shared/events';
 import { getDb, type Db } from '../db/client';
 import {
   conversation,
   conversationEvent,
   conversationMember,
+  file,
   message,
   messageMention,
   notification,
   reaction,
 } from '../db/schema';
 import { parseMentions } from '../../shared/mentions';
+import { toFileDto } from '../modules/files/dto';
 import { AppError, forbidden, notFound } from '../lib/errors';
 import { newId } from '../lib/id';
 import { hubFor } from './workspace-hub';
@@ -78,6 +80,7 @@ export type PostInput = {
   clientMsgId: string;
   parentId?: string | null | undefined;
   alsoInChannel?: boolean | undefined;
+  fileIds?: string[] | undefined;
 };
 
 /**
@@ -328,6 +331,7 @@ export class ConversationRoom extends DurableObject<Env> {
         }
 
         const id = newId();
+        const files = await this.claimableFiles(input);
         const { targets, notify } = await this.notificationsFor({
           conversationId: input.conversationId,
           authorId: input.authorId,
@@ -353,11 +357,24 @@ export class ConversationRoom extends DurableObject<Env> {
             deletedAt: null,
             createdAt: at,
           };
-          created = toMessageDto({ ...row, rowId: 0 });
+          created = { ...toMessageDto({ ...row, rowId: 0 }), files: files.map(toFileDto) };
           return {
             event: { type: 'message.created', data: { message: created } },
             changes: [
               this.db.insert(message).values(row),
+              ...(files.length
+                ? [
+                    this.db
+                      .update(file)
+                      .set({ messageId: id })
+                      .where(
+                        inArray(
+                          file.id,
+                          files.map((f) => f.id),
+                        ),
+                      ),
+                  ]
+                : []),
               ...this.mentionAndNotificationRows(id, targets, notify, at),
               ...(parentId
                 ? [
@@ -602,6 +619,30 @@ export class ConversationRoom extends DurableObject<Env> {
         // closing socket
       }
     }
+  }
+
+  /**
+   * Files a message may attach: uploaded by its author, to this conversation, and not yet on any
+   * message. Anyone else's file id (or one already used) makes the whole send fail, so a message can
+   * never "borrow" a file from another conversation.
+   */
+  private async claimableFiles(input: PostInput) {
+    const ids = [...new Set(input.fileIds ?? [])];
+    if (!ids.length) return [];
+    const rows = await this.db
+      .select()
+      .from(file)
+      .where(
+        and(
+          inArray(file.id, ids),
+          eq(file.conversationId, input.conversationId),
+          eq(file.uploaderId, input.authorId),
+          isNull(file.messageId),
+          eq(file.status, 'ready'),
+        ),
+      );
+    if (rows.length !== ids.length) throw notFound('One of those files');
+    return rows;
   }
 
   private async findLive(conversationId: string, messageId: string): Promise<MessageRow> {

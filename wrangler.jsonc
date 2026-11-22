@@ -12,6 +12,9 @@
       "migrations_dir": "migrations",
     },
   ],
+  // Private bucket for uploads. Nothing in it is ever public: every download goes through an
+  // authorised Worker route.
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "huddle-files" }],
   // One ConversationRoom per channel or DM: the single, ordered writer for that conversation.
   "durable_objects": {
     "bindings": [
