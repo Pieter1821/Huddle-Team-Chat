@@ -408,9 +408,16 @@ export const notification = sqliteTable(
     createdAt: createdAt(),
     readAt: timestamp('read_at'),
     emailedAt: timestamp('emailed_at'),
+    // Set when a digest job claims this notification, before sending: a concurrent job cannot claim
+    // it again, and a retry reuses the same claim (and so the same idempotency key and content).
+    digestId: text('digest_id'),
+    claimedAt: timestamp('claimed_at'),
   },
   (t) => [
     uniqueIndex('notification_unique').on(t.userId, t.messageId, t.kind),
+    index('notification_claimed')
+      .on(t.digestId)
+      .where(sql`${t.digestId} IS NOT NULL AND ${t.emailedAt} IS NULL`),
     index('notification_pending')
       .on(t.userId)
       .where(sql`${t.readAt} IS NULL AND ${t.emailedAt} IS NULL`),

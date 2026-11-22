@@ -74,7 +74,7 @@ describe('1 and 6: the email budget', () => {
       throw new Error('mail server down');
     });
     await expect(
-      sendEmail(config, { to: 'a@b.c', subject: 's', text: 't', html: 'h' }, db, 80),
+      sendEmail(config, { to: 'a@b.c', subject: 's', text: 't', html: 'h' }, { db, limit: 80 }),
     ).rejects.toThrow();
     warn.mockRestore();
     expect(await usage()).toBe(10);

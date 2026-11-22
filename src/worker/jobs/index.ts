@@ -85,7 +85,8 @@ export async function queue(batch: MessageBatch<DigestJob>, env: Env) {
       message.ack();
     } catch (err) {
       console.error('digest failed', err instanceof AppError ? err.code : err);
-      message.retry({ delaySeconds: 60 * 5 });
+      // Later than CLAIM_IN_FLIGHT_MS, so the retry reuses the claim (same content, same idempotency key).
+      message.retry({ delaySeconds: 20 * 60 });
     }
   }
 }
