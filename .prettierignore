@@ -1,0 +1,9 @@
+node_modules
+dist
+.wrangler
+public
+design
+migrations/meta
+worker-configuration.d.ts
+package-lock.json
+*.md
