@@ -12,7 +12,10 @@ import {
   unsubscribeRoutes,
 } from './modules/notifications/routes';
 import { activityRoutes } from './modules/activity/routes';
+import { usageRoutes } from './modules/admin/usage';
 import { auditRoutes } from './modules/audit/routes';
+import { exportRoutes } from './modules/export/routes';
+import { importRoutes } from './modules/import/routes';
 import { brandingRoutes, logoRoutes } from './modules/branding/routes';
 import { conversationWebhookRoutes, incomingHookRoutes, webhookRoutes } from './modules/webhooks/routes';
 import { conversationRoutes } from './modules/conversations/routes';
@@ -70,6 +73,9 @@ app.route('/webhooks', webhookRoutes);
 app.route('/invitations', invitationRoutes);
 app.route('/members', memberRoutes);
 app.route('/admin/audit', auditRoutes);
+app.route('/admin/usage', usageRoutes);
+app.route('/import', importRoutes);
+app.route('/export', exportRoutes);
 app.route('/conversations', conversationRoutes);
 app.route('/conversations', conversationFileRoutes);
 app.route('/conversations', conversationNotificationRoutes);

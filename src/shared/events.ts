@@ -40,6 +40,8 @@ export type ConversationEvent =
   | Base<'reaction.removed', { messageId: string; userId: string; emoji: string }>
   | Base<'member.joined', { userId: string; addedBy: string }>
   | Base<'member.left', { userId: string; removedBy: string }>
-  | Base<'conversation.updated', { name?: string; topic?: string | null; archived?: boolean }>;
+  | Base<'conversation.updated', { name?: string; topic?: string | null; archived?: boolean }>
+  // Imported history used seq numbers fromSeq..toSeq without individual events: reload history.
+  | Base<'history.imported', { fromSeq: number; toSeq: number; count: number }>;
 
 export type ConversationEventType = ConversationEvent['type'];

@@ -13,7 +13,10 @@ export type AuditAction =
   | 'invitation.revoked'
   | 'member.role_changed'
   | 'member.deactivated'
-  | 'member.reactivated';
+  | 'member.reactivated'
+  | 'import.started'
+  | 'import.finished'
+  | 'export.started';
 
 export type AuditEntry = {
   action: AuditAction;
