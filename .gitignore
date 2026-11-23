@@ -13,3 +13,5 @@ test-results/
 docs/
 
 design/
+.dev.vars.*
+!.dev.vars.example

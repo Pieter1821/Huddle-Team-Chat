@@ -53,4 +53,10 @@ export default tseslint.config(
     files: ['eslint.config.js'],
     extends: [tseslint.configs.disableTypeChecked],
   },
+  {
+    // The plain Node script that starts the app for end-to-end tests.
+    files: ['e2e/**/*.mjs'],
+    extends: [tseslint.configs.disableTypeChecked],
+    languageOptions: { globals: { process: 'readonly' } },
+  },
 );

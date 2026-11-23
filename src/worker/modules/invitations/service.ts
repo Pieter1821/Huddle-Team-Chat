@@ -22,35 +22,48 @@ export async function findPendingInvitation(db: Db, email: string): Promise<Invi
 
 /**
  * Turns an invitation into membership in one atomic batch: the member row, the invitation marked
- * used, a guest's channel memberships and the audit entry all land together or not at all.
+ * used, the starting channels and the audit entry all land together or not at all. Members and
+ * admins start in #general (the channel everyone shares); guests only in the channels chosen for them.
  */
 export async function acceptInvitation(db: Db, inv: Invitation, userId: string): Promise<void> {
-  const guestChannels =
-    inv.role === 'guest' && inv.guestConversationIds?.length
+  const startChannels =
+    inv.role !== 'guest'
       ? await db
           .select({ id: conversation.id })
           .from(conversation)
           .where(
             and(
               eq(conversation.workspaceId, inv.workspaceId),
-              inArray(conversation.id, inv.guestConversationIds),
-              inArray(conversation.kind, ['public', 'private']),
+              eq(conversation.kind, 'public'),
+              eq(conversation.name, 'general'),
               isNull(conversation.archivedAt),
             ),
           )
-      : [];
+      : inv.guestConversationIds?.length
+        ? await db
+            .select({ id: conversation.id })
+            .from(conversation)
+            .where(
+              and(
+                eq(conversation.workspaceId, inv.workspaceId),
+                inArray(conversation.id, inv.guestConversationIds),
+                inArray(conversation.kind, ['public', 'private']),
+                isNull(conversation.archivedAt),
+              ),
+            )
+        : [];
 
   await db.batch([
     db.insert(workspaceMember).values({ workspaceId: inv.workspaceId, userId, role: inv.role }),
     db.update(invitation).set({ acceptedAt: new Date() }).where(eq(invitation.id, inv.id)),
-    ...guestChannels.map((c) =>
+    ...startChannels.map((c) =>
       db.insert(conversationMember).values({ conversationId: c.id, userId }).onConflictDoNothing(),
     ),
     auditInsert(db, {
       action: 'invitation.accepted',
       actorId: userId,
       targetId: inv.id,
-      meta: { role: inv.role, channels: guestChannels.length },
+      meta: { role: inv.role, channels: startChannels.length },
     }),
   ]);
 }

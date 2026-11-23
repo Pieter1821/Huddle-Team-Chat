@@ -27,8 +27,11 @@ export async function api<T>(path: string, init: RequestInit & { json?: unknown 
   if (res.status === 204) return undefined as T;
   const body: unknown = await res.json().catch(() => null);
   if (!res.ok) {
-    const error = (body as { error?: { code?: string; message?: string } } | null)?.error;
-    throw new ApiError(res.status, error?.code ?? 'unknown', error?.message ?? 'Something went wrong.');
+    // Our routes nest { error: { code, message } }; Better Auth's /auth/* routes reply { code, message }.
+    type ErrorBody = { error?: { code?: string; message?: string }; code?: string; message?: string };
+    const b = (body ?? {}) as ErrorBody;
+    const error = b.error ?? b;
+    throw new ApiError(res.status, error.code ?? 'unknown', error.message ?? 'Something went wrong.');
   }
   return body as T;
 }
