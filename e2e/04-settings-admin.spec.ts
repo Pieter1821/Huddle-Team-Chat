@@ -68,6 +68,8 @@ test('your settings, admin tools and conversation details', async ({ browser }) 
   // Security log and usage.
   await owner.getByRole('link', { name: 'Security log' }).click();
   await expect(owner.getByRole('cell', { name: 'Deactivated someone' })).toBeVisible();
+  await expect(owner.getByRole('cell', { name: 'Revoked a webhook' })).toBeVisible();
+  await expect(owner.getByRole('cell', { name: 'colour: #ffb020 → default' })).toBeVisible();
   await owner.getByRole('link', { name: 'Usage' }).click();
   await expect(owner.getByRole('meter', { name: 'Database' })).toBeVisible();
 
