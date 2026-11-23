@@ -1,5 +1,6 @@
 import { and, eq } from 'drizzle-orm';
 import { createMiddleware } from 'hono/factory';
+import { ensureMigrated } from '../db/migrate';
 import { getConfig, type Config } from '../config';
 import { getDb, type Db } from '../db/client';
 import { workspaceMember } from '../db/schema';
@@ -16,6 +17,7 @@ export type AppEnv = {
 
 /** Per-request services: validated config, the Drizzle client and Better Auth. */
 export const withServices = createMiddleware<AppEnv>(async (c, next) => {
+  await ensureMigrated(c.env.DB);
   const config = getConfig(c.env, new URL(c.req.url).origin);
   const db = getDb(c.env);
   c.set('config', config);

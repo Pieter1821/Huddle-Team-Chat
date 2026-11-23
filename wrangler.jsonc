@@ -18,7 +18,8 @@
   // Private bucket for uploads. Nothing in it is ever public: every download goes through an
   // authorised Worker route.
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "huddle-files" }],
-  // Digest emails go through a queue: failed sends retry (3 times), then park in a dead-letter queue.
+  // Digest emails and pushes go through a queue. Failed digests retry (3 times); a digest that still
+  // fails is picked up again by the hourly job, so no dead-letter queue is needed.
   "queues": {
     "producers": [{ "binding": "NOTIFICATIONS", "queue": "huddle-notifications" }],
     "consumers": [
@@ -26,7 +27,6 @@
         "queue": "huddle-notifications",
         "max_batch_size": 10,
         "max_retries": 3,
-        "dead_letter_queue": "huddle-notifications-dlq",
       },
     ],
   },

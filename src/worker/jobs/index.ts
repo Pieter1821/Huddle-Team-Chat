@@ -1,6 +1,7 @@
 import { and, inArray, isNull, lt, sql } from 'drizzle-orm';
 import { getConfig } from '../config';
 import { getDb, type Db } from '../db/client';
+import { ensureMigrated } from '../db/migrate';
 import { file, rateLimit, verification } from '../db/schema';
 import { AppError } from '../lib/errors';
 import { roomFor } from '../modules/conversations/service';
@@ -79,6 +80,7 @@ async function backgroundConfig(env: Env, db: Db) {
 
 /** Cron: once an hour. */
 export async function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+  await ensureMigrated(env.DB);
   const db = getDb(env);
   const now = new Date();
   ctx.waitUntil(cleanup(env, db, now));
@@ -91,6 +93,7 @@ export async function scheduled(_controller: ScheduledController, env: Env, ctx:
  * never retried, since a retry could repeat a push on devices that already showed it.
  */
 export async function queue(batch: MessageBatch<NotificationJob>, env: Env) {
+  await ensureMigrated(env.DB);
   const db = getDb(env);
   const config = await backgroundConfig(env, db);
   if (!config) {
