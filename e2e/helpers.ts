@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
 
 export const LOG_FILE = '.wrangler/e2e/server.log';
-export const ORIGIN = 'http://localhost:8787';
+// Its own port, so the tests can run while `npm run dev` is using 8787.
+export const ORIGIN = 'http://localhost:8790';
 export const ADMIN_EMAIL = 'owner@e2e.test';
 
 export const logSize = () => readFileSync(LOG_FILE, 'utf8').length;

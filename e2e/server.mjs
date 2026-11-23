@@ -1,4 +1,4 @@
-// Starts Huddle for the end-to-end tests with its own empty database and its own settings, so a
+// Starts Huddle for the end-to-end tests on port 8790 with its own empty database and settings, so a
 // run never touches your local data or your .dev.vars. Server output is copied to a log file the
 // tests read sign-in codes from (locally, emails are printed instead of sent).
 import { spawn, execSync } from 'node:child_process';
@@ -14,7 +14,7 @@ mkdirSync(STATE_DIR, { recursive: true });
 writeFileSync(
   '.dev.vars.e2e',
   [
-    'APP_URL=http://localhost:8787',
+    'APP_URL=http://localhost:8790',
     `ADMIN_EMAIL=${ADMIN_EMAIL}`,
     `BETTER_AUTH_SECRET=${randomBytes(32).toString('hex')}`,
     '',
@@ -25,7 +25,7 @@ const env = { ...process.env, CLOUDFLARE_ENV: 'e2e', HUDDLE_STATE_DIR: STATE_DIR
 execSync(`npx wrangler d1 migrations apply DB --local --persist-to ${STATE_DIR}`, { stdio: 'inherit', env });
 
 const log = createWriteStream(LOG_FILE);
-const server = spawn('npx', ['vite', '--port', '8787', '--strictPort'], { env, shell: true });
+const server = spawn('npx', ['vite', '--port', '8790', '--strictPort'], { env, shell: true });
 for (const stream of [server.stdout, server.stderr]) {
   stream.on('data', (chunk) => {
     log.write(chunk);

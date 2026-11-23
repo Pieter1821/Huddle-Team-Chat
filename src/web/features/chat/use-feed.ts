@@ -1,18 +1,20 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQuery, useQueryClient, type QueryClient } from '@tanstack/react-query';
-import type { ConversationEvent, MessageDto } from '../../../shared/events';
+import type { ConversationEvent, FileDto, MessageDto } from '../../../shared/events';
 import { api } from '@/lib/api';
 import { openLiveSocket } from '@/lib/live-socket';
 import type { SidebarConversation } from '@/lib/types';
 import {
   addPending,
   applyEvents,
+  applyToThread,
   dropPending,
   markPending,
   prependOlder,
   upsertConfirmed,
   type Feed,
   type FeedMessage,
+  type Thread,
 } from './feed-state';
 
 const PAGE = 50;
@@ -54,16 +56,23 @@ export function useFeed(conversationId: string, myId: string) {
     const applyBatch = async (events: ConversationEvent[]) => {
       const before = current();
       if (!before) return;
+      let all = events;
       let { feed: next, stop } = applyEvents(before, events);
       if (stop === 'gap') {
         // Missing events: fetch everything after the last one applied, then apply again.
         const res = await api<{ events: ConversationEvent[]; complete: boolean }>(
           `/conversations/${conversationId}/events?after=${next.lastSeq}&limit=500`,
         );
-        ({ feed: next, stop } = applyEvents(next, [...res.events, ...events]));
+        all = [...res.events, ...events];
+        ({ feed: next, stop } = applyEvents(next, all));
         if (!res.complete || stop === 'gap') stop = 'reload';
       }
       client.setQueryData(key, next);
+      // Open threads in this conversation follow the same events (each change is idempotent).
+      const ordered = [...all].sort((a, b) => a.seq - b.seq);
+      client.setQueriesData<Thread>({ queryKey: ['thread', conversationId] }, (t) =>
+        t ? ordered.reduce(applyToThread, t) : t,
+      );
       if (events.some((e) => e.type === 'conversation.updated' || e.type.startsWith('member.'))) {
         void client.invalidateQueries({ queryKey: ['conversation', conversationId] });
         void client.invalidateQueries({ queryKey: ['conversations'] });
@@ -132,8 +141,8 @@ export function useFeed(conversationId: string, myId: string) {
   }, []);
 
   const send = useCallback(
-    (body: string, clientMsgId = newClientMsgId()) =>
-      sendMessage(client, conversationId, myId, body, clientMsgId),
+    (draft: Omit<OutgoingMessage, 'conversationId' | 'myId' | 'clientMsgId'>) =>
+      sendMessage(client, { ...draft, conversationId, myId, clientMsgId: newClientMsgId() }),
     [client, conversationId, myId],
   );
 
@@ -168,46 +177,91 @@ export function useFeed(conversationId: string, myId: string) {
 
 export const newClientMsgId = () => crypto.randomUUID().replaceAll('-', '');
 
+export const threadKey = (conversationId: string, parentId: string) =>
+  ['thread', conversationId, parentId] as const;
+
+export type OutgoingMessage = {
+  conversationId: string;
+  myId: string;
+  clientMsgId: string;
+  body: string;
+  files?: FileDto[];
+  parentId?: string | null;
+  alsoInChannel?: boolean;
+};
+
 /**
- * Shows the message at once as "sending", then swaps in the server's copy. The clientMsgId makes a
- * retry safe: the server returns the original instead of posting twice.
+ * Shows the message at once as "sending" (in the conversation, its thread, or both), then swaps in
+ * the server's copy. The clientMsgId makes a retry safe: the server returns the original instead of
+ * posting twice.
  */
-export async function sendMessage(
-  client: QueryClient,
-  conversationId: string,
-  myId: string,
-  body: string,
-  clientMsgId: string,
-): Promise<void> {
-  const key = feedKey(conversationId);
-  const now = new Date().toISOString();
+export async function sendMessage(client: QueryClient, out: OutgoingMessage): Promise<void> {
+  const { conversationId, clientMsgId, parentId = null, alsoInChannel = false, files = [] } = out;
+  const inChannel = !parentId || alsoInChannel;
   const draft: FeedMessage = {
     id: `pending-${clientMsgId}`,
     conversationId,
     seq: Number.MAX_SAFE_INTEGER,
-    authorId: myId,
-    body,
-    parentId: null,
-    alsoInChannel: false,
+    authorId: out.myId,
+    body: out.body,
+    parentId,
+    alsoInChannel,
     replyCount: 0,
     lastReplyAt: null,
     editedAt: null,
     deletedAt: null,
-    createdAt: now,
+    createdAt: new Date().toISOString(),
     clientMsgId,
     webhookId: null,
     reactions: [],
+    files,
   };
-  client.setQueryData<Feed>(key, (f) => {
-    if (!f) return f;
-    const existing = f.messages.some((m) => m.pending && m.clientMsgId === clientMsgId);
-    return existing ? markPending(f, clientMsgId, 'sending') : addPending(f, draft);
-  });
+  const feed = feedKey(conversationId);
+  const thread = parentId ? threadKey(conversationId, parentId) : null;
+  const setState = (state: 'sending' | 'failed') => {
+    if (inChannel) {
+      client.setQueryData<Feed>(feed, (f) => {
+        if (!f) return f;
+        const known = f.messages.some((m) => m.pending && m.clientMsgId === clientMsgId);
+        return known ? markPending(f, clientMsgId, state) : addPending(f, { ...draft, pending: state });
+      });
+    }
+    if (thread) {
+      client.setQueryData<Thread>(thread, (t) => {
+        if (!t) return t;
+        const known = t.replies.some((m) => m.pending && m.clientMsgId === clientMsgId);
+        return {
+          ...t,
+          replies: known
+            ? t.replies.map((m) =>
+                m.pending && m.clientMsgId === clientMsgId ? { ...m, pending: state } : m,
+              )
+            : [...t.replies, { ...draft, pending: state }],
+        };
+      });
+    }
+  };
+
+  setState('sending');
   try {
     const { message } = await api<{ message: MessageDto }>(`/conversations/${conversationId}/messages`, {
-      json: { body, clientMsgId },
+      json: {
+        body: out.body,
+        clientMsgId,
+        ...(parentId ? { parentId, alsoInChannel } : {}),
+        ...(files.length ? { fileIds: files.map((f) => f.id) } : {}),
+      },
     });
-    client.setQueryData<Feed>(key, (f) => (f ? { ...f, messages: upsertConfirmed(f.messages, message) } : f));
+    if (inChannel) {
+      client.setQueryData<Feed>(feed, (f) =>
+        f ? { ...f, messages: upsertConfirmed(f.messages, message) } : f,
+      );
+    }
+    if (thread) {
+      client.setQueryData<Thread>(thread, (t) =>
+        t ? { ...t, replies: upsertConfirmed(t.replies, message) } : t,
+      );
+    }
     // Your own message means you've read everything up to it.
     client.setQueryData<SidebarConversation[]>(['conversations'], (list) =>
       list?.map((c) =>
@@ -223,11 +277,32 @@ export async function sendMessage(
       ),
     );
   } catch (err) {
-    client.setQueryData<Feed>(key, (f) => (f ? markPending(f, clientMsgId, 'failed') : f));
+    setState('failed');
     throw err;
   }
 }
 
-export function discardFailed(client: QueryClient, conversationId: string, clientMsgId: string) {
-  client.setQueryData<Feed>(feedKey(conversationId), (f) => (f ? dropPending(f, clientMsgId) : f));
+/** Sends a failed message again with the same clientMsgId (so it can never post twice). */
+export function retryMessage(client: QueryClient, m: FeedMessage, myId: string) {
+  if (!m.clientMsgId) return;
+  void sendMessage(client, {
+    conversationId: m.conversationId,
+    myId,
+    clientMsgId: m.clientMsgId,
+    body: m.body,
+    files: m.files ?? [],
+    parentId: m.parentId,
+    alsoInChannel: m.alsoInChannel,
+  }).catch(() => undefined);
+}
+
+export function discardFailed(client: QueryClient, m: FeedMessage) {
+  const id = m.clientMsgId;
+  if (!id) return;
+  client.setQueryData<Feed>(feedKey(m.conversationId), (f) => (f ? dropPending(f, id) : f));
+  if (m.parentId) {
+    client.setQueryData<Thread>(threadKey(m.conversationId, m.parentId), (t) =>
+      t ? { ...t, replies: t.replies.filter((r) => !(r.pending && r.clientMsgId === id)) } : t,
+    );
+  }
 }

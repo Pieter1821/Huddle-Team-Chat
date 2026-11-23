@@ -1,6 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
-import { ADMIN_EMAIL, codeFor, logSize } from './helpers';
+import { ADMIN_EMAIL, ORIGIN, codeFor, logSize } from './helpers';
 
 const MEMBER_EMAIL = 'sam@e2e.test';
 
@@ -51,7 +51,7 @@ test('an invited teammate joins from the link and picks a name', async ({ browse
   await expect(page.getByRole('navigation', { name: 'Conversations' })).toBeVisible();
   const res = await page.request.post('/api/invitations', {
     data: { email: MEMBER_EMAIL, role: 'member' },
-    headers: { origin: 'http://localhost:8787' },
+    headers: { origin: ORIGIN },
   });
   expect(res.status()).toBe(201);
   const { link } = (await res.json()) as { link: string };

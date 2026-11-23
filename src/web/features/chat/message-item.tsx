@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AlertDialog } from 'radix-ui';
-import { MessageSquare, Pencil, SmilePlus, Trash2 } from 'lucide-react';
+import { FileText, MessageSquare, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { FeedMessage } from './feed-state';
@@ -14,6 +14,8 @@ export type MessageActions = {
   remove: (m: FeedMessage) => Promise<void>;
   retry: (m: FeedMessage) => void;
   discard: (m: FeedMessage) => void;
+  /** Opens the thread under a message (absent inside a thread). */
+  openThread?: ((m: FeedMessage) => void) | undefined;
 };
 
 const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
@@ -113,21 +115,7 @@ export function MessageItem({
           </>
         )}
 
-        {!!m.files?.length && (
-          <ul className="mt-1.5 flex flex-wrap gap-2">
-            {m.files.map((f) => (
-              <li key={f.id}>
-                <a
-                  href={`/api/files/${f.id}`}
-                  className="inline-flex max-w-64 items-center gap-2 rounded-lg px-3 py-2 text-sm edge hover:bg-active"
-                >
-                  <span className="truncate">{f.name}</span>
-                  <span className="shrink-0 text-xs text-meta">{formatSize(f.size)}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-        )}
+        {!!m.files?.length && <Attachments files={m.files} pending={!!m.pending} />}
 
         {!!m.reactions?.length && (
           <ul className="mt-1.5 flex flex-wrap gap-1.5" aria-label="Reactions">
@@ -159,11 +147,18 @@ export function MessageItem({
           </ul>
         )}
 
-        {m.replyCount > 0 && (
-          <p className="mt-1 flex items-center gap-1.5 text-sm font-medium text-action">
+        {m.replyCount > 0 && actions.openThread && (
+          <button
+            type="button"
+            onClick={() => actions.openThread?.(m)}
+            className="mt-1 flex items-center gap-1.5 rounded text-sm font-medium text-action hover:underline"
+          >
             <MessageSquare aria-hidden className="size-3.5" />
             {m.replyCount} {m.replyCount === 1 ? 'reply' : 'replies'}
-          </p>
+          </button>
+        )}
+        {m.parentId && m.alsoInChannel && actions.openThread && (
+          <p className="text-xs text-meta">Also replied in a thread</p>
         )}
 
         {m.pending === 'sending' && <p className="text-xs text-meta">Sending…</p>}
@@ -195,6 +190,7 @@ export function MessageItem({
           onReact={(e) => actions.react(m, e, true)}
           onEdit={() => onEditingChange(true)}
           onDelete={() => actions.remove(m)}
+          onReply={actions.openThread && !m.parentId ? () => actions.openThread?.(m) : undefined}
         />
       )}
     </article>
@@ -208,12 +204,14 @@ function Toolbar({
   onReact,
   onEdit,
   onDelete,
+  onReply,
 }: {
   mine: boolean;
   canDelete: boolean;
   onReact: (emoji: string) => void;
   onEdit: () => void;
   onDelete: () => Promise<void>;
+  onReply?: (() => void) | undefined;
 }) {
   const [picking, setPicking] = useState(false);
   return (
@@ -247,6 +245,18 @@ function Toolbar({
           onClick={() => setPicking(true)}
         >
           <SmilePlus aria-hidden className="size-4" />
+        </Button>
+      )}
+      {onReply && !picking && (
+        <Button
+          variant="quiet"
+          size="icon"
+          aria-label="Reply in thread"
+          title="Reply in thread"
+          className="size-8"
+          onClick={onReply}
+        >
+          <MessageSquare aria-hidden className="size-4" />
         </Button>
       )}
       {mine && !picking && (
@@ -373,6 +383,60 @@ function EditBox({
         </p>
       )}
       <p className="mt-1 text-xs text-meta">Enter to save · Esc to cancel</p>
+    </div>
+  );
+}
+
+const INLINE_IMAGES = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp']);
+
+/** Images show inline (served same-origin with their real type); everything else is a download card. */
+function Attachments({ files, pending }: { files: NonNullable<FeedMessage['files']>; pending: boolean }) {
+  const images = files.filter((f) => INLINE_IMAGES.has(f.mime));
+  const others = files.filter((f) => !images.includes(f));
+  return (
+    <div className="mt-1.5 space-y-2">
+      {images.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {images.map((f) => (
+            <li key={f.id}>
+              <a
+                href={`/api/files/${f.id}?inline=1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block"
+              >
+                <img
+                  src={`/api/files/${f.id}?inline=1`}
+                  alt={f.name}
+                  loading="lazy"
+                  className={cn(
+                    'max-h-72 max-w-full rounded-lg object-contain edge sm:max-w-sm',
+                    pending && 'opacity-60',
+                  )}
+                />
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
+      {others.length > 0 && (
+        <ul className="flex flex-wrap gap-2">
+          {others.map((f) => (
+            <li key={f.id}>
+              <a
+                href={`/api/files/${f.id}`}
+                className="flex max-w-72 items-center gap-3 rounded-lg px-3 py-2 text-sm edge hover:bg-active"
+              >
+                <FileText aria-hidden className="size-5 shrink-0 text-meta" />
+                <span className="min-w-0">
+                  <span className="block truncate font-medium">{f.name}</span>
+                  <span className="block text-xs text-meta">{formatSize(f.size)}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }
