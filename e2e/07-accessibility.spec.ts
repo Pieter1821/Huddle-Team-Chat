@@ -45,6 +45,25 @@ test('signed out: the sign-in screen', async ({ browser }) => {
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
+test('fresh install: the sign-in page asks to connect Gmail first', async ({ browser }) => {
+  const context = await browser.newContext({ baseURL: ORIGIN, storageState: { cookies: [], origins: [] } });
+  const page = await context.newPage();
+  // On a real server with no Gmail yet (this test server prints emails, so it reports ready).
+  await page.route('**/api/email/status', (route) =>
+    route.fulfill({ json: { ready: false, gmail: 'not-connected', canConnect: true, needsSetup: true } }),
+  );
+  await page.goto('/signin?gmail=wrong-account');
+  await expect(page.getByRole('heading', { name: 'Connect Gmail to get started' })).toBeVisible();
+  await expect(page.getByText('That Google account can’t be used here.')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Connect Gmail' })).toHaveAttribute(
+    'href',
+    '/api/email/google/start',
+  );
+  const problems = await audit(page, 'connect Gmail');
+  await context.close();
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
 test.describe('signed in', () => {
   test.use({ storageState: SESSION });
 
@@ -116,7 +135,16 @@ test.describe('signed in', () => {
     await page.goto('/settings');
     await expect(page.getByRole('heading', { name: 'Profile' })).toBeVisible();
     problems.push(...(await audit(page, 'settings')));
-    for (const section of ['people', 'workspace', 'webhooks', 'security', 'usage', 'import', 'export']) {
+    for (const section of [
+      'people',
+      'workspace',
+      'email',
+      'webhooks',
+      'security',
+      'usage',
+      'import',
+      'export',
+    ]) {
       await page.goto(`/admin/${section}`);
       await expect(page.getByRole('navigation', { name: 'Admin sections' })).toBeVisible();
       await page.waitForLoadState('networkidle');

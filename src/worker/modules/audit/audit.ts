@@ -13,6 +13,8 @@ export type AuditAction =
   | 'workspace.logo_removed'
   | 'webhook.created'
   | 'webhook.revoked'
+  | 'email.connected'
+  | 'email.disconnected'
   | 'invitation.created'
   | 'invitation.accepted'
   | 'invitation.revoked'

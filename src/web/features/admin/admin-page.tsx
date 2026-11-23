@@ -3,6 +3,7 @@ import { Page } from '@/components/ui/page';
 import { useMe } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { AuditTab } from './audit-tab';
+import { EmailTab } from './email-tab';
 import { ExportTab } from './export-tab';
 import { ImportTab } from './import-tab';
 import { PeopleTab } from './people-tab';
@@ -13,6 +14,7 @@ import { WorkspaceTab } from './workspace-tab';
 const TABS = [
   { path: 'people', label: 'People' },
   { path: 'workspace', label: 'Workspace' },
+  { path: 'email', label: 'Email' },
   { path: 'webhooks', label: 'Webhooks' },
   { path: 'security', label: 'Security log' },
   { path: 'usage', label: 'Usage' },
@@ -52,6 +54,7 @@ export function AdminPage() {
       <Routes>
         <Route path="people" element={<PeopleTab me={me} />} />
         <Route path="workspace" element={<WorkspaceTab />} />
+        <Route path="email" element={<EmailTab />} />
         <Route path="webhooks" element={<WebhooksTab />} />
         <Route path="security" element={<AuditTab />} />
         <Route path="usage" element={<UsageTab />} />

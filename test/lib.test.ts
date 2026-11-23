@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { env } from 'cloudflare:workers';
+import { getDb } from '../src/worker/db/client';
 import { getConfig } from '../src/worker/config';
 import { emailDeliveryConfigured, sendEmail } from '../src/worker/lib/email';
 import { newId } from '../src/worker/lib/id';
@@ -10,6 +12,8 @@ const baseEnv = {
   BETTER_AUTH_SECRET: 'x'.repeat(32),
   EMAIL_FROM: '',
   GOOGLE_CLIENT_ID: '',
+  GMAIL_CLIENT_ID: '',
+  GMAIL_CLIENT_SECRET: '',
   GOOGLE_CLIENT_SECRET: '',
 } as unknown as Env;
 
@@ -56,8 +60,8 @@ describe('getConfig', () => {
 describe('sendEmail with no delivery method configured', () => {
   const email = { to: 'a@b.c', subject: 's', text: 'Your code is 123456', html: 'h' };
 
-  it('reports that email is not configured', () => {
-    expect(emailDeliveryConfigured()).toBe(false);
+  it('reports that email is not configured', async () => {
+    expect(await emailDeliveryConfigured(getDb(env))).toBe(false);
   });
 
   it('refuses in production rather than printing sign-in codes into logs', async () => {

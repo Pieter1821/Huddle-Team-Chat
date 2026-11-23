@@ -7,8 +7,14 @@ ADMIN_EMAIL=
 # At least 32 random characters. Generate one with: npx @better-auth/cli secret
 BETTER_AUTH_SECRET=
 
-# Optional: the sender address for outgoing email, e.g. "Huddle <no-reply@example.com>".
+# Optional: the name shown on outgoing email, e.g. "Acme Huddle <ignored@example.com>" (with Gmail,
+# the address is always the connected Gmail account; only the name is used).
 EMAIL_FROM=
+
+# Email through your own Gmail: an OAuth client from your Google Cloud project (Web application),
+# with the Gmail API enabled. Then Admin > Email > Connect Gmail.
+GMAIL_CLIENT_ID=
+GMAIL_CLIENT_SECRET=
 
 # Optional: "Sign in with Google".
 GOOGLE_CLIENT_ID=

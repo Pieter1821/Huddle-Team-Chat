@@ -11,6 +11,8 @@ interface __BaseEnv_Env {
 	EMAIL_FROM: string;
 	GOOGLE_CLIENT_ID: string;
 	GOOGLE_CLIENT_SECRET: string;
+	GMAIL_CLIENT_ID: string;
+	GMAIL_CLIENT_SECRET: string;
 	CONVERSATION_ROOM: DurableObjectNamespace<import("./src/worker/index").ConversationRoom>;
 	WORKSPACE_HUB: DurableObjectNamespace<import("./src/worker/index").WorkspaceHub>;
 }
@@ -26,7 +28,7 @@ type StringifyValues<EnvType extends Record<string, unknown>> = {
 	[Binding in keyof EnvType]: EnvType[Binding] extends string ? EnvType[Binding] : string;
 };
 declare namespace NodeJS {
-	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_URL" | "ADMIN_EMAIL" | "BETTER_AUTH_SECRET" | "EMAIL_FROM" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET">> {}
+	interface ProcessEnv extends StringifyValues<Pick<Cloudflare.Env, "APP_URL" | "ADMIN_EMAIL" | "BETTER_AUTH_SECRET" | "EMAIL_FROM" | "GOOGLE_CLIENT_ID" | "GOOGLE_CLIENT_SECRET" | "GMAIL_CLIENT_ID" | "GMAIL_CLIENT_SECRET">> {}
 }
 declare module "*.txt" {
 	const value: string;

@@ -16,6 +16,8 @@ export async function api(path: string, opts: Options = {}) {
   const res = await exports.default.fetch(`${APP_URL}${path}`, {
     method,
     headers,
+    // Redirects are returned, not followed: in tests every URL (even Google's) reaches this Worker.
+    redirect: 'manual',
     ...(opts.body !== undefined ? { body: JSON.stringify(opts.body) } : {}),
   });
   const text = await res.text();
@@ -123,6 +125,7 @@ export async function addMember(
 /** Empties every table (children first, because D1 enforces foreign keys). */
 export async function resetDb() {
   const tables = [
+    'email_account',
     'push_subscription',
     'push_key',
     'audit_log',

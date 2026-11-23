@@ -52,6 +52,13 @@ test('your settings, admin tools and conversation details', async ({ browser }) 
   await owner.getByRole('button', { name: 'Use Huddle’s default' }).click();
   await expect(hex).toHaveValue('#00b18c');
 
+  // Admin › Email: not connected on this test server (it prints emails), with the setup steps and
+  // the exact redirect address to paste into Google.
+  await owner.getByRole('link', { name: 'Email' }).click();
+  await expect(owner.getByText('Not connected. On this computer')).toBeVisible();
+  await expect(owner.getByRole('link', { name: 'Connect Gmail' })).toBeHidden(); // no Gmail client set here
+  await expect(owner.getByText('http://localhost:8790/api/email/google/callback')).toBeVisible();
+
   // Admin › Webhooks: the URL is shown once and really posts into the channel.
   await owner.getByRole('link', { name: 'Webhooks' }).click();
   await owner.getByLabel('Channel', { exact: true }).selectOption({ label: '#general' });

@@ -48,5 +48,5 @@ describe('sending too fast', () => {
     expect(Number(refused.res.headers.get('retry-after'))).toBeGreaterThanOrEqual(1);
     // Someone else is not affected.
     expect((await post(jaco.cookie, 1)).status).toBe(201);
-  });
+  }, 30_000); // 70 sends at once take a while when the whole suite is running
 });

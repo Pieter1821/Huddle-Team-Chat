@@ -21,6 +21,7 @@ import { conversationWebhookRoutes, incomingHookRoutes, webhookRoutes } from './
 import { conversationRoutes } from './modules/conversations/routes';
 import { conversationFileRoutes, fileRoutes } from './modules/files/routes';
 import { realtimeRoutes } from './modules/realtime/routes';
+import { emailAdminRoutes, emailRoutes } from './modules/email/routes';
 import { pushRoutes } from './modules/push/routes';
 import { searchRoutes } from './modules/search/routes';
 import { invitationRoutes } from './modules/invitations/routes';
@@ -75,6 +76,8 @@ app.route('/invitations', invitationRoutes);
 app.route('/members', memberRoutes);
 app.route('/admin/audit', auditRoutes);
 app.route('/admin/usage', usageRoutes);
+app.route('/admin/email', emailAdminRoutes);
+app.route('/email', emailRoutes);
 app.route('/import', importRoutes);
 app.route('/export', exportRoutes);
 app.route('/conversations', conversationRoutes);

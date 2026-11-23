@@ -5,6 +5,7 @@ import { notification, user, userPreference } from '../../db/schema';
 import { sign } from '../../lib/crypto';
 import { newId } from '../../lib/id';
 import { DIGEST_DAILY_BUDGET, emailsSentToday, sendEmail, type Email } from '../../lib/email';
+import { emailBrand, renderEmail } from '../../lib/email-layout';
 
 export type DigestJob = { userId: string };
 
@@ -126,9 +127,6 @@ type Item = {
   convName: string | null;
 };
 
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
 /** Mention tokens become readable names; long text is cut to a 140-character snippet. */
 function snippet(body: string, names: Map<string, string>): string {
   const readable = body
@@ -169,8 +167,8 @@ async function render(
   if (!items.length) return null;
   const recipient = await db.query.user.findFirst({ where: eq(user.id, userId), columns: { email: true } });
   if (!recipient) return null;
-  const ws = await db.query.workspace.findFirst({ columns: { name: true } });
-  const workspaceName = ws?.name ?? 'Huddle';
+  const brand = await emailBrand(db, config);
+  const workspaceName = brand.name;
 
   const mentionedIds = [
     ...new Set(items.flatMap((i) => [...i.body.matchAll(/<@([0-9A-HJKMNP-TV-Z]{26})>/g)].map((m) => m[1]!))),
@@ -204,17 +202,28 @@ async function render(
       '',
       `Stop these emails: ${unsubscribe}`,
     ].join('\n'),
-    html:
-      `<div style="font-family:system-ui,sans-serif;font-size:15px;line-height:1.5;color:#151515;max-width:520px">` +
-      `<p>While you were away in <strong>${escapeHtml(workspaceName)}</strong>:</p>` +
-      shown
-        .map(
-          (s) =>
-            `<p style="margin:16px 0"><strong>${escapeHtml(s.who)}</strong> in ${escapeHtml(s.where)}<br>${escapeHtml(s.text)}<br><a href="${escapeHtml(s.link)}" style="color:#00805f">Open in Huddle</a></p>`,
-        )
-        .join('') +
-      (more > 0 ? `<p>…and ${more} more.</p>` : '') +
-      `<p style="color:#5f5e59;font-size:13px"><a href="${escapeHtml(unsubscribe)}" style="color:#5f5e59">Stop these emails</a></p></div>`,
+    html: renderEmail(brand, {
+      preheader: shown[0] ? `${shown[0].who}: ${shown[0].text}` : `Messages are waiting in ${workspaceName}.`,
+      heading: `${count} unread ${count === 1 ? 'message' : 'messages'} for you`,
+      blocks: [
+        {
+          type: 'text',
+          text: `While you were away in ${workspaceName}, people mentioned you or wrote to you:`,
+        },
+        ...shown.map((s) => ({
+          type: 'item' as const,
+          title: s.who,
+          meta: `in ${s.where}`,
+          text: s.text,
+          url: s.link,
+        })),
+        ...(more > 0 ? [{ type: 'text' as const, text: `…and ${more} more.`, muted: true }] : []),
+        { type: 'button' as const, label: `Open ${workspaceName}`, url: config.appUrl },
+      ],
+      footer:
+        'You get these when mentions or direct messages wait unread. Change how often in your email settings.',
+      unsubscribeUrl: unsubscribe,
+    }),
     // Lets mail apps show their own one-click "Unsubscribe" button (RFC 8058).
     headers: {
       'List-Unsubscribe': `<${unsubscribe}>`,

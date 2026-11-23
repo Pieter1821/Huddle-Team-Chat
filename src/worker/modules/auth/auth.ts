@@ -10,15 +10,11 @@ import { sendEmail } from '../../lib/email';
 import { newId } from '../../lib/id';
 import { recordAudit } from '../audit/audit';
 import { acceptInvitation, findPendingInvitation, hasOwner } from '../invitations/service';
+import { emailBrand } from '../../lib/email-layout';
 import { magicLinkEmail, signInCodeEmail } from './emails';
 
 const FIVE_MINUTES = 5 * 60;
 const THIRTY_DAYS = 30 * 24 * 60 * 60;
-
-async function workspaceName(db: Db): Promise<string> {
-  const ws = await db.query.workspace.findFirst({ columns: { name: true } });
-  return ws?.name ?? 'Huddle';
-}
 
 /** Whether this address may create an account: the admin before an owner exists, or an invitee. */
 async function mayJoin(db: Db, config: Config, email: string): Promise<boolean> {
@@ -96,14 +92,14 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
         storeOTP: 'hashed',
         async sendVerificationOTP({ email, otp }) {
           if (!(await mayReceiveSignIn(db, config, email))) return;
-          await sendEmail(config, signInCodeEmail(email, otp, await workspaceName(db)), { db });
+          await sendEmail(config, signInCodeEmail(email, otp, await emailBrand(db, config)), { db });
         },
       }),
       magicLink({
         expiresIn: FIVE_MINUTES,
         async sendMagicLink({ email, url }) {
           if (!(await mayReceiveSignIn(db, config, email))) return;
-          await sendEmail(config, magicLinkEmail(email, url, await workspaceName(db)), { db });
+          await sendEmail(config, magicLinkEmail(email, url, await emailBrand(db, config)), { db });
         },
       }),
     ],

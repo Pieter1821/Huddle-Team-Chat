@@ -8,6 +8,7 @@ import { ApiError, api } from '@/lib/api';
 import { useBranding, useMe, useSignOut } from '@/lib/queries';
 import type { InvitationPreview } from '@/lib/types';
 import { AuthLayout, FormError } from './auth-layout';
+import { GMAIL_RESULTS } from '@/lib/gmail-results';
 import { SignInForm } from './sign-in-form';
 
 /** /signin: anyone who already has an account or an invitation. */
@@ -19,11 +20,47 @@ export function SignInPage() {
   // Only same-app paths are followed after sign-in (never a full URL to another site).
   const next =
     params.get('next')?.startsWith('/') && !params.get('next')?.startsWith('//') ? params.get('next')! : '/';
+  const email = useQuery({
+    queryKey: ['email-status'],
+    queryFn: () =>
+      api<{ ready: boolean; gmail: string; canConnect: boolean; needsSetup: boolean }>('/email/status'),
+  });
+  const result = params.get('gmail');
   if (me.data) return <Navigate to={next} replace />;
+  if (email.data && !email.data.ready) {
+    return (
+      <AuthLayout
+        title={email.data.needsSetup ? 'Connect Gmail to get started' : 'Sign-in emails are paused'}
+        subtitle={
+          email.data.needsSetup
+            ? 'Huddle emails sign-in codes from your own Gmail. Connect it once, with the owner’s Google account.'
+            : 'Gmail stopped accepting Huddle. The owner can reconnect it, with the owner’s Google account or the same Gmail as before.'
+        }
+      >
+        {result && result !== 'connected' && <FormError message={GMAIL_RESULTS[result]?.text ?? null} />}
+        {email.data.canConnect ? (
+          <Button asChild className="w-full">
+            <a href="/api/email/google/start">
+              {email.data.needsSetup ? 'Connect Gmail' : 'Reconnect Gmail'}
+            </a>
+          </Button>
+        ) : (
+          <p className="text-sm text-muted">
+            This server isn’t set up for Gmail yet: add <code>GMAIL_CLIENT_ID</code> and{' '}
+            <code>GMAIL_CLIENT_SECRET</code> to its settings (see the setup guide), then reload.
+          </p>
+        )}
+      </AuthLayout>
+    );
+  }
   return (
     <AuthLayout
       title={`Sign in to ${branding?.name ?? 'Huddle'}`}
-      subtitle="No password: we’ll email you a one-time code."
+      subtitle={
+        result === 'connected'
+          ? 'Gmail is connected. Enter your email and we’ll send your code.'
+          : 'No password: we’ll email you a one-time code.'
+      }
     >
       <SignInForm onSignedIn={() => void navigate(next, { replace: true })} />
     </AuthLayout>

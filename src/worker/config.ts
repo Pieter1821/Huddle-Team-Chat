@@ -13,6 +13,8 @@ const schema = z.object({
   EMAIL_FROM: optional,
   GOOGLE_CLIENT_ID: optional,
   GOOGLE_CLIENT_SECRET: optional,
+  GMAIL_CLIENT_ID: optional,
+  GMAIL_CLIENT_SECRET: optional,
 });
 
 export type Config = {
@@ -24,6 +26,10 @@ export type Config = {
   /** Sender address for outgoing email (the delivery transport itself is chosen in lib/email.ts). */
   emailFrom: string;
   google: { clientId: string; clientSecret: string } | null;
+  /** The OAuth client for sending email through the team's own Gmail (Admin > Email). */
+  gmail: { clientId: string; clientSecret: string } | null;
+  /** The display name on outgoing email (the address is the connected Gmail account). */
+  emailName: string;
 };
 
 export function getConfig(env: Env): Config {
@@ -44,5 +50,10 @@ export function getConfig(env: Env): Config {
       v.GOOGLE_CLIENT_ID && v.GOOGLE_CLIENT_SECRET
         ? { clientId: v.GOOGLE_CLIENT_ID, clientSecret: v.GOOGLE_CLIENT_SECRET }
         : null,
+    gmail:
+      v.GMAIL_CLIENT_ID && v.GMAIL_CLIENT_SECRET
+        ? { clientId: v.GMAIL_CLIENT_ID, clientSecret: v.GMAIL_CLIENT_SECRET }
+        : null,
+    emailName: (/^\s*"?([^"<]+?)"?\s*</.exec(v.EMAIL_FROM ?? '')?.[1] ?? 'Huddle').trim(),
   };
 }
