@@ -6,7 +6,7 @@ import { randomToken, sha256Hex } from '../../lib/crypto';
 import { AppError, badRequest, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody } from '../../lib/validate';
-import { auditInsert } from '../audit/audit';
+import { auditInsert, requestMeta } from '../audit/audit';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
 import { postableConversation, roomFor, unwrap } from '../conversations/service';
@@ -39,6 +39,7 @@ export const conversationWebhookRoutes = new Hono<AppEnv>()
         createdBy: actor.userId,
       }),
       auditInsert(db, {
+        ...requestMeta(c),
         action: 'webhook.created',
         actorId: actor.userId,
         targetId: id,
@@ -83,6 +84,7 @@ export const webhookRoutes = new Hono<AppEnv>().use('/*', requireActor).delete('
       .set({ revokedAt: new Date() })
       .where(and(eq(webhook.id, hook.id), isNull(webhook.revokedAt))),
     auditInsert(db, {
+      ...requestMeta(c),
       action: 'webhook.revoked',
       actorId: actor.userId,
       targetId: hook.id,

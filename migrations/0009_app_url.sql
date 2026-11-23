@@ -1,0 +1,1 @@
+ALTER TABLE `workspace` ADD `app_url` text;

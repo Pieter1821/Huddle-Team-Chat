@@ -20,7 +20,7 @@
     "db:check": "drizzle-kit check",
     "db:migrate:local": "wrangler d1 migrations apply DB --local",
     "build": "vite build",
-    "deploy": "wrangler d1 migrations apply DB --remote && vite build && wrangler deploy",
+    "deploy": "node scripts/deploy.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm run db:check && npm test && npm run build",
     "preview": "vite preview"
   },
@@ -80,5 +80,39 @@
   },
   "overrides": {
     "workerd": "1.20261119.1"
+  },
+  "cloudflare": {
+    "bindings": {
+      "ADMIN_EMAIL": {
+        "description": "The email address of the person who sets up and owns this Huddle (they sign in first). Use the address of a **Google account**: Huddle sends its sign-in codes through that account's Gmail."
+      },
+      "BETTER_AUTH_SECRET": {
+        "description": "At least **32 random letters and numbers** that nobody else knows. It protects sign-ins; keep a copy somewhere safe (changing it later signs everyone out)."
+      },
+      "APP_URL": {
+        "description": "Leave **empty**: Huddle uses the address it's opened at. Set it only once you give Huddle its own domain, e.g. `https://chat.example.com`."
+      },
+      "GMAIL_CLIENT_ID": {
+        "description": "Can be left empty for now. After deploying, open Huddle: its sign-in page shows how to create this in your own free Google Cloud project (about 10 minutes)."
+      },
+      "GMAIL_CLIENT_SECRET": {
+        "description": "Leave empty for now, like `GMAIL_CLIENT_ID`; it comes from the same Google Cloud step."
+      },
+      "EMAIL_FROM": {
+        "description": "Optional. The name shown on emails, e.g. `Acme Huddle <x@example.com>` (only the name is used)."
+      },
+      "GOOGLE_CLIENT_ID": {
+        "description": "Optional, leave empty: only for a \"Sign in with Google\" button."
+      },
+      "GOOGLE_CLIENT_SECRET": {
+        "description": "Optional, leave empty: only for a \"Sign in with Google\" button."
+      },
+      "DB": {
+        "description": "The database for messages, people and settings."
+      },
+      "FILES": {
+        "description": "Private storage for files people share."
+      }
+    }
   }
 }

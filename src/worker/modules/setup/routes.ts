@@ -6,7 +6,7 @@ import { conflict, forbidden } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody } from '../../lib/validate';
 import { requireSession, type AppEnv } from '../../middleware/context';
-import { auditInsert } from '../audit/audit';
+import { auditInsert, requestMeta } from '../audit/audit';
 import { displayName } from '../workspace/routes';
 
 export const setupRoutes = new Hono<AppEnv>()
@@ -35,7 +35,7 @@ export const setupRoutes = new Hono<AppEnv>()
         // One batch: workspace, owner, #general and the audit entry exist together or not at all.
         // The workspace_singleton index makes a concurrent second setup fail instead of duplicating.
         await db.batch([
-          db.insert(workspace).values({ id: workspaceId, name: workspaceName }),
+          db.insert(workspace).values({ id: workspaceId, name: workspaceName, appUrl: config.appUrl }),
           db.update(user).set({ name: yourName }).where(eq(user.id, userId)),
           db.insert(workspaceMember).values({ workspaceId, userId, role: 'owner' }),
           db.insert(conversation).values({
@@ -47,7 +47,12 @@ export const setupRoutes = new Hono<AppEnv>()
             createdBy: userId,
           }),
           db.insert(conversationMember).values({ conversationId: generalId, userId }),
-          auditInsert(db, { action: 'workspace.created', actorId: userId, targetId: workspaceId }),
+          auditInsert(db, {
+            ...requestMeta(c),
+            action: 'workspace.created',
+            actorId: userId,
+            targetId: workspaceId,
+          }),
         ]);
       } catch (err) {
         if (String(err).includes('UNIQUE'))

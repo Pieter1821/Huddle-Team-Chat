@@ -1,6 +1,8 @@
+import type { Context } from 'hono';
 import { auditLog } from '../../db/schema';
 import type { Db } from '../../db/client';
 import { newId } from '../../lib/id';
+import type { AppEnv } from '../../middleware/context';
 
 export type AuditAction =
   | 'auth.sign_in'
@@ -49,3 +51,12 @@ export const auditInsert = (db: Db, entry: AuditEntry) =>
 export const recordAudit = async (db: Db, entry: AuditEntry) => {
   await auditInsert(db, entry);
 };
+
+/**
+ * Where a request came from, for the security log: the address Cloudflare saw (it overwrites this
+ * header, so it can't be faked) and the browser.
+ */
+export const requestMeta = (c: Context<AppEnv>) => ({
+  ipAddress: c.req.header('cf-connecting-ip') ?? null,
+  userAgent: c.req.header('user-agent') ?? null,
+});

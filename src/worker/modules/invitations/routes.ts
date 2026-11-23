@@ -9,7 +9,7 @@ import { newId } from '../../lib/id';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { canInvite, canReadConversation, isAdmin } from '../access/access';
-import { auditInsert } from '../audit/audit';
+import { auditInsert, requestMeta } from '../audit/audit';
 import { emailBrand } from '../../lib/email-layout';
 import { invitationEmail } from '../auth/emails';
 import { INVITATION_TTL_MS } from './service';
@@ -115,6 +115,7 @@ export const invitationRoutes = new Hono<AppEnv>()
         expiresAt,
       }),
       auditInsert(db, {
+        ...requestMeta(c),
         action: 'invitation.created',
         actorId: actor.userId,
         targetId: id,
@@ -178,7 +179,12 @@ export const invitationRoutes = new Hono<AppEnv>()
     if (!isAdmin(actor) && inv.invitedBy !== actor.userId) throw notFound('This invitation');
     await db.batch([
       db.update(invitation).set({ revokedAt: new Date() }).where(eq(invitation.id, inv.id)),
-      auditInsert(db, { action: 'invitation.revoked', actorId: actor.userId, targetId: inv.id }),
+      auditInsert(db, {
+        ...requestMeta(c),
+        action: 'invitation.revoked',
+        actorId: actor.userId,
+        targetId: inv.id,
+      }),
     ]);
     return c.body(null, 204);
   });

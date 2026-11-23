@@ -51,6 +51,15 @@ describe('getConfig', () => {
     expect(cfg.emailFrom).toBe('Brightwater <chat@brightwater.example>');
   });
 
+  it('works out its address from the request when APP_URL is not set (one-click deploys)', () => {
+    const config = getConfig({ ...baseEnv, APP_URL: '' }, 'https://huddle.acme.workers.dev');
+    expect(config.appUrl).toBe('https://huddle.acme.workers.dev');
+    expect(config.isLocal).toBe(false);
+    // An APP_URL that is set always wins (e.g. a custom domain).
+    expect(getConfig(baseEnv, 'https://huddle.acme.workers.dev').appUrl).toBe('https://chat.example.com');
+    expect(() => getConfig({ ...baseEnv, APP_URL: '' })).toThrow(/APP_URL/);
+  });
+
   it('fails loudly with a readable message when misconfigured', () => {
     expect(() => getConfig({ ...baseEnv, BETTER_AUTH_SECRET: 'short' })).toThrow(/BETTER_AUTH_SECRET/);
     expect(() => getConfig({ ...baseEnv, APP_URL: 'not a url' })).toThrow(/APP_URL/);

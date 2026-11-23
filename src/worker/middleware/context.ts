@@ -16,7 +16,7 @@ export type AppEnv = {
 
 /** Per-request services: validated config, the Drizzle client and Better Auth. */
 export const withServices = createMiddleware<AppEnv>(async (c, next) => {
-  const config = getConfig(c.env);
+  const config = getConfig(c.env, new URL(c.req.url).origin);
   const db = getDb(c.env);
   c.set('config', config);
   c.set('db', db);

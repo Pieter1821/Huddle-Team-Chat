@@ -1,7 +1,8 @@
 # Copy to .dev.vars for local development. In production these are Worker secrets.
 
-# The full URL Huddle is served from (no trailing slash).
-APP_URL=http://localhost:8787
+# Optional: the full URL Huddle is served from (no trailing slash). Leave empty to use the address
+# it's opened at (locally http://localhost:8787); set it once Huddle has its own domain.
+APP_URL=
 # The first person to sign in with this email becomes the workspace owner.
 ADMIN_EMAIL=
 # At least 32 random characters. Generate one with: npx @better-auth/cli secret
