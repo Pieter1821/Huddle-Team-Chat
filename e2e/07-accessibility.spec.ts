@@ -64,6 +64,22 @@ test('fresh install: the sign-in page asks to connect Gmail first', async ({ bro
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
+test('privacy policy and terms are public, linked from sign-in, and accessible', async ({ browser }) => {
+  const context = await browser.newContext({ baseURL: ORIGIN, storageState: { cookies: [], origins: [] } });
+  const page = await context.newPage();
+  await page.goto('/signin');
+  const legal = page.getByRole('navigation', { name: 'Legal' });
+  await legal.getByRole('link', { name: 'Privacy policy' }).click();
+  await expect(page.getByRole('heading', { name: 'Privacy policy', level: 1 })).toBeVisible();
+  await expect(page.getByText('Limited Use requirements')).toBeVisible();
+  const problems = await audit(page, 'privacy policy');
+  await page.getByRole('link', { name: 'Terms of use' }).click();
+  await expect(page.getByRole('heading', { name: 'Terms of use', level: 1 })).toBeVisible();
+  problems.push(...(await audit(page, 'terms')));
+  await context.close();
+  expect(problems, problems.join('\n')).toEqual([]);
+});
+
 test.describe('signed in', () => {
   test.use({ storageState: SESSION });
 

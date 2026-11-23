@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { LegalLinks } from '@/components/legal-links';
 import { Card, Page, SaveNote, Select } from '@/components/ui/page';
 import { ApiError, api } from '@/lib/api';
 import {
@@ -36,6 +37,7 @@ export function SettingsPage() {
       <ProfileCard name={me.user.name} email={me.user.email} />
       <DeviceCard />
       <NotificationsCard />
+      <LegalLinks className="px-1 pb-4" />
     </Page>
   );
 }

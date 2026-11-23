@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { LegalLinks } from '@/components/legal-links';
 import { useBranding } from '@/lib/queries';
 
 /** The frame every getting-in screen shares: the team's logo and name above one focused card. */
@@ -25,6 +26,7 @@ export function AuthLayout({
           {subtitle && <p className="mt-2 text-[15px] leading-relaxed text-muted">{subtitle}</p>}
           <div className="mt-6">{children}</div>
         </section>
+        <LegalLinks className="mt-6 justify-center" />
       </div>
     </main>
   );
