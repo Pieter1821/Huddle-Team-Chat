@@ -11,6 +11,7 @@ import { newId } from '../../lib/id';
 import { recordAudit } from '../audit/audit';
 import { acceptInvitation, findPendingInvitation, hasOwner } from '../invitations/service';
 import { emailBrand } from '../../lib/email-layout';
+import { authenticator } from './authenticator';
 import { magicLinkEmail, signInCodeEmail } from './emails';
 
 const FIVE_MINUTES = 5 * 60;
@@ -58,7 +59,7 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
         rateLimit: schema.rateLimit,
       },
     }),
-    // No passwords anywhere: email codes, magic links and Google only.
+    // No passwords anywhere: email codes, magic links, authenticator apps and Google only.
     emailAndPassword: { enabled: false },
     socialProviders: config.google
       ? { google: { clientId: config.google.clientId, clientSecret: config.google.clientSecret } }
@@ -73,6 +74,9 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
         '/email-otp/send-verification-otp': { window: 60 * 60, max: 5 },
         '/sign-in/magic-link': { window: 60 * 60, max: 5 },
         '/sign-in/email-otp': { window: FIVE_MINUTES, max: 10 },
+        '/sign-in/authenticator': { window: FIVE_MINUTES, max: 10 },
+        '/authenticator/start': { window: 60 * 60, max: 10 },
+        '/authenticator/finish': { window: FIVE_MINUTES, max: 10 },
       },
     },
     advanced: {
@@ -85,6 +89,7 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
       ...(waitUntil ? { backgroundTasks: { handler: waitUntil } } : {}),
     },
     plugins: [
+      authenticator(config, db),
       emailOTP({
         otpLength: 6,
         expiresIn: FIVE_MINUTES,
@@ -154,7 +159,11 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
       // Failed code or link attempts are what an owner needs to see when someone is guessing.
       after: createAuthMiddleware(async (ctx) => {
         const failed = ctx.context.returned instanceof APIError;
-        if (!failed || !['/sign-in/email-otp', '/magic-link/verify'].includes(ctx.path)) return;
+        if (
+          !failed ||
+          !['/sign-in/email-otp', '/magic-link/verify', '/sign-in/authenticator'].includes(ctx.path)
+        )
+          return;
         const body = ctx.body as { email?: unknown } | undefined;
         await recordAudit(db, {
           action: 'auth.sign_in_failed',

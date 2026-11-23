@@ -237,6 +237,7 @@ function MembersCard({ me }: { me: Me }) {
   });
   const [filter, setFilter] = useState('');
   const [note, setNote] = useState<Note>(null);
+  const [reset, setReset] = useState<{ name: string; link: string; copied: boolean } | null>(null);
   const refresh = () =>
     Promise.all([
       client.invalidateQueries({ queryKey: ['members'] }),
@@ -253,6 +254,17 @@ function MembersCard({ me }: { me: Me }) {
       setNote({ ok: false, text: errorText(err, 'That change didn’t save.') });
     }
   };
+
+  // Lost phone: a one-time link to set up the authenticator app again (the admin passes it on).
+  async function resetApp(m: AdminMember) {
+    setNote(null);
+    try {
+      const { link } = await api<{ link: string }>(`/members/${m.userId}/authenticator-reset`, { json: {} });
+      setReset({ name: m.name, link, copied: false });
+    } catch (err) {
+      setNote({ ok: false, text: errorText(err, 'The reset link wasn’t created.') });
+    }
+  }
 
   const shown = (members.data ?? []).filter((m) =>
     `${m.name} ${m.email ?? ''}`.toLowerCase().includes(filter.trim().toLowerCase()),
@@ -275,6 +287,28 @@ function MembersCard({ me }: { me: Me }) {
         />
         <SaveNote state={note} />
       </div>
+      {reset && (
+        <div role="status" className="mb-4 space-y-2 rounded-lg bg-raised px-4 py-3 text-sm">
+          <p>
+            Send this link to <strong>{reset.name}</strong> (it works once, for 7 days). Their old app keeps
+            working until they use it.
+          </p>
+          <div className="flex flex-wrap items-center gap-2">
+            <code className="rounded-md bg-ground px-2 py-1 break-all edge">{reset.link}</code>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() =>
+                void navigator.clipboard
+                  .writeText(reset.link)
+                  .then(() => setReset({ ...reset, copied: true }))
+              }
+            >
+              {reset.copied ? 'Copied' : 'Copy link'}
+            </Button>
+          </div>
+        </div>
+      )}
       <ul className="mt-3 divide-y divide-rule">
         {shown.map((m) => {
           const off = m.status === 'deactivated';
@@ -341,17 +375,25 @@ function MembersCard({ me }: { me: Me }) {
                     Reactivate
                   </Button>
                 ) : (
-                  <ConfirmButton
-                    className="hover:text-attention"
-                    title={`Deactivate ${m.name}?`}
-                    description="They’re signed out everywhere at once and can’t sign in until you reactivate them. Their messages stay."
-                    confirmLabel="Deactivate"
-                    onConfirm={() =>
-                      run(api(`/members/${m.userId}/deactivate`, { json: {} }), `${m.name} was deactivated.`)
-                    }
-                  >
-                    Deactivate
-                  </ConfirmButton>
+                  <>
+                    <Button size="sm" variant="quiet" onClick={() => void resetApp(m)}>
+                      Reset app
+                    </Button>
+                    <ConfirmButton
+                      className="hover:text-attention"
+                      title={`Deactivate ${m.name}?`}
+                      description="They’re signed out everywhere at once and can’t sign in until you reactivate them. Their messages stay."
+                      confirmLabel="Deactivate"
+                      onConfirm={() =>
+                        run(
+                          api(`/members/${m.userId}/deactivate`, { json: {} }),
+                          `${m.name} was deactivated.`,
+                        )
+                      }
+                    >
+                      Deactivate
+                    </ConfirmButton>
+                  </>
                 ))}
             </li>
           );

@@ -1,7 +1,8 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { conversationMember, session, user, workspaceMember } from '../../db/schema';
+import { conversationMember, session, totpResetLink, user, workspaceMember } from '../../db/schema';
+import { randomToken, sha256Hex } from '../../lib/crypto';
 import { forbidden, notFound } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
@@ -165,4 +166,28 @@ export const memberRoutes = new Hono<AppEnv>()
       }),
     ]);
     return c.json({ member: { userId: target.userId, status: 'active' } });
+  })
+
+  // Lost phone: a one-time link (7 days) to set up the authenticator app again. The old app keeps
+  // working until the new one is set up.
+  .post('/:userId/authenticator-reset', async (c) => {
+    const { actor, db, config } = c.var;
+    const target = await findTarget(db, actor, c.req.param('userId'));
+    if (!canDeactivate(actor, target)) throw forbidden('You cannot reset this person’s authenticator.');
+    const token = randomToken();
+    await db.batch([
+      db.insert(totpResetLink).values({
+        tokenHash: await sha256Hex(token),
+        userId: target.userId,
+        createdBy: actor.userId,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      }),
+      auditInsert(db, {
+        ...requestMeta(c),
+        action: 'member.authenticator_reset',
+        actorId: actor.userId,
+        targetId: target.userId,
+      }),
+    ]);
+    return c.json({ link: `${config.appUrl}/authenticator/${token}` }, 201);
   });
