@@ -1,6 +1,7 @@
 import { sql } from 'drizzle-orm';
 import type { Config } from '../config';
 import type { Db } from '../db/client';
+import { getAccount, sendWithGmail } from '../modules/email/gmail';
 import { AppError } from './errors';
 
 export type Email = {
@@ -13,29 +14,27 @@ export type Email = {
 };
 
 /**
- * How email actually leaves the Worker. Huddle ships with no provider wired in: a transport is the
- * one place a delivery method plugs in later. It receives the sender address and an optional
- * idempotency key, which transports that support one should pass on so a retried send of the same
- * message is never delivered twice. It throws on failure.
+ * A replacement delivery method, used by tests. It receives the sender address and an optional
+ * idempotency key. Normally email goes through the team's connected Gmail account instead.
  */
 export type EmailTransport = (
   email: Email & { from: string },
   options: { idempotencyKey?: string | undefined },
 ) => Promise<void>;
 
-/** No delivery method is configured yet, so there is no transport. */
 let transport: EmailTransport | null = null;
 
-/**
- * Plugs in (or removes) the delivery method. Used by tests with a fake transport, and the single place
- * a real provider adapter will be wired in.
- */
+/** Plugs in (or removes) a fake delivery method (tests). */
 export function useEmailTransport(next: EmailTransport | null): void {
   transport = next;
 }
 
-/** Whether emails really leave the Worker (false while none is configured, even locally). */
-export const emailDeliveryConfigured = () => transport !== null;
+/** Whether emails really leave the Worker: Gmail is connected and working (false locally without it). */
+export async function emailDeliveryConfigured(db: Db): Promise<boolean> {
+  if (transport) return true;
+  const account = await getAccount(db);
+  return Boolean(account && !account.needsReconnectAt);
+}
 
 /** Daily email budget for digests, leaving room within it for sign-in codes. */
 export const DIGEST_DAILY_BUDGET = 80;
@@ -68,16 +67,30 @@ async function releaseEmailSlot(db: Db, now = new Date()): Promise<void> {
   await db.run(sql`UPDATE email_usage SET sent = max(sent - 1, 0) WHERE day = ${today(now)}`);
 }
 
-async function deliver(config: Config, email: Email, idempotencyKey: string | undefined): Promise<void> {
+async function deliver(
+  config: Config,
+  email: Email,
+  idempotencyKey: string | undefined,
+  db: Db | undefined,
+): Promise<void> {
   if (transport) {
     await transport({ ...email, from: config.emailFrom }, { idempotencyKey });
+    return;
+  }
+  const account = db ? await getAccount(db) : null;
+  if (db && account) {
+    await sendWithGmail(db, config, account, email);
     return;
   }
   // No delivery method yet. On this machine the email is printed so sign-in works during
   // development; anywhere else that is an error, because printing sign-in codes into production
   // logs would be a security hole.
   if (config.isLocal) {
-    console.warn(`\n[email] to: ${email.to}\n[email] subject: ${email.subject}\n${email.text}\n`);
+    console.warn(`
+[email] to: ${email.to}
+[email] subject: ${email.subject}
+${email.text}
+`);
     return;
   }
   throw new AppError(503, 'email_not_configured', 'Email is not set up for this workspace yet.');
@@ -101,7 +114,7 @@ export async function sendEmail(config: Config, email: Email, options: SendOptio
   const { db, limit = null, idempotencyKey } = options;
   if (db && !(await reserveEmailSlot(db, limit))) return false;
   try {
-    await deliver(config, email, idempotencyKey);
+    await deliver(config, email, idempotencyKey, db);
   } catch (err) {
     if (db) await releaseEmailSlot(db);
     throw err;

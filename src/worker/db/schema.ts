@@ -541,3 +541,19 @@ export const pushKey = sqliteTable('push_key', {
   privateKey: text('private_key').notNull(), // base64url(iv || AES-GCM ciphertext of the JWK)
   createdAt: createdAt(),
 });
+
+/* ---------------------------------------------------------------------------------------------
+ * Outgoing email through the team's own Gmail account. One row at most; the refresh token Google
+ * issues is stored sealed with a key derived from the server secret.
+ * ------------------------------------------------------------------------------------------- */
+
+export const emailAccount = sqliteTable('email_account', {
+  id: text('id').primaryKey(), // always 'gmail'
+  address: text('address').notNull(),
+  refreshToken: text('refresh_token').notNull(), // sealed
+  connectedBy: text('connected_by'), // null when connected before setup (by the owner, pre sign-in)
+  connectedAt: createdAt(),
+  // Set when Google stopped accepting the token (password changed, access removed, unused for
+  // months): admins are asked to reconnect.
+  needsReconnectAt: timestamp('needs_reconnect_at'),
+});

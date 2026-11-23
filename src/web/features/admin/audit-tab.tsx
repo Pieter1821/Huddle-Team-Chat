@@ -28,6 +28,8 @@ const ACTIONS: Record<string, string> = {
   'workspace.logo_removed': 'Removed the logo',
   'webhook.created': 'Created a webhook',
   'webhook.revoked': 'Revoked a webhook',
+  'email.connected': 'Connected Gmail for email',
+  'email.disconnected': 'Disconnected Gmail',
   'invitation.created': 'Invited someone',
   'invitation.accepted': 'Accepted an invitation',
   'invitation.revoked': 'Withdrew an invitation',
@@ -116,7 +118,7 @@ export function AuditTab() {
 function describe(e: Entry): string {
   const m = e.meta ?? {};
   const parts: string[] = [];
-  for (const key of ['email', 'role', 'from', 'to', 'name', 'channel', 'method'] as const) {
+  for (const key of ['email', 'address', 'role', 'from', 'to', 'name', 'channel', 'method'] as const) {
     const v = m[key];
     if (typeof v === 'string' || typeof v === 'number')
       parts.push(key === 'channel' ? `#${v}` : `${key}: ${v}`);

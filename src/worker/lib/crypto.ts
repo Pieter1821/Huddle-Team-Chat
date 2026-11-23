@@ -55,3 +55,49 @@ export async function verify(
   if (expected.byteLength !== given.byteLength) return false;
   return crypto.subtle.timingSafeEqual(expected, given);
 }
+
+/** An AES-256-GCM key derived from the server secret for ONE purpose (data at rest). */
+async function sealingKey(secret: string, purpose: string): Promise<CryptoKey> {
+  const master = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), 'HKDF', false, [
+    'deriveKey',
+  ]);
+  return crypto.subtle.deriveKey(
+    { name: 'HKDF', hash: 'SHA-256', salt: new Uint8Array(32), info: new TextEncoder().encode(purpose) },
+    master,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt', 'decrypt'],
+  );
+}
+
+/**
+ * Encrypts a secret (such as a stored OAuth token) for keeping in the database: a copy of the
+ * database alone can't use it. Returns base64url(iv || ciphertext).
+ */
+export async function seal(secret: string, purpose: string, plaintext: string): Promise<string> {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const sealed = new Uint8Array(
+    await crypto.subtle.encrypt(
+      { name: 'AES-GCM', iv },
+      await sealingKey(secret, purpose),
+      new TextEncoder().encode(plaintext),
+    ),
+  );
+  const out = new Uint8Array(iv.byteLength + sealed.byteLength);
+  out.set(iv);
+  out.set(sealed, iv.byteLength);
+  return toBase64Url(out);
+}
+
+/** Reverses `seal`. Throws if the server secret has changed or the value was tampered with. */
+export async function unseal(secret: string, purpose: string, stored: string): Promise<string> {
+  const bytes = Uint8Array.from(atob(stored.replaceAll('-', '+').replaceAll('_', '/')), (ch) =>
+    ch.charCodeAt(0),
+  );
+  const plain = await crypto.subtle.decrypt(
+    { name: 'AES-GCM', iv: bytes.slice(0, 12) },
+    await sealingKey(secret, purpose),
+    bytes.slice(12),
+  );
+  return new TextDecoder().decode(plain);
+}

@@ -10,6 +10,7 @@ import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { canInvite, canReadConversation, isAdmin } from '../access/access';
 import { auditInsert } from '../audit/audit';
+import { emailBrand } from '../../lib/email-layout';
 import { invitationEmail } from '../auth/emails';
 import { INVITATION_TTL_MS } from './service';
 
@@ -124,10 +125,14 @@ export const invitationRoutes = new Hono<AppEnv>()
     const link = `${config.appUrl}/invite/${token}`;
     let emailSent = false;
     try {
-      await sendEmail(config, invitationEmail(body.email, link, ws.name, actor.name, body.role === 'guest'), {
-        db,
-      });
-      emailSent = emailDeliveryConfigured();
+      await sendEmail(
+        config,
+        invitationEmail(body.email, link, await emailBrand(db, config), actor.name, body.role === 'guest'),
+        {
+          db,
+        },
+      );
+      emailSent = await emailDeliveryConfigured(db);
     } catch (err) {
       // The invitation stands; the inviter can still copy the link and share it another way.
       if (!(err instanceof AppError)) throw err;

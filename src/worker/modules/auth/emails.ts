@@ -1,40 +1,93 @@
 import type { Email } from '../../lib/email';
+import { renderEmail, type EmailBrand } from '../../lib/email-layout';
 
-const escapeHtml = (s: string) =>
-  s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
-
-const layout = (body: string) =>
-  `<div style="font-family:system-ui,sans-serif;font-size:16px;line-height:1.5;color:#151515;max-width:480px">${body}<p style="color:#5f5e59;font-size:13px">If you didn't ask for this, you can ignore this email.</p></div>`;
-
-export const signInCodeEmail = (to: string, code: string, workspaceName: string): Email => ({
+export const signInCodeEmail = (to: string, code: string, brand: EmailBrand): Email => ({
   to,
-  subject: `${code} is your ${workspaceName} sign-in code`,
-  text: `Your sign-in code for ${workspaceName} is ${code}.\nIt works once and expires in 5 minutes.`,
-  html: layout(
-    `<p>Your sign-in code for ${escapeHtml(workspaceName)}:</p><p style="font-size:32px;font-weight:600;letter-spacing:4px;margin:16px 0">${code}</p><p>It works once and expires in 5 minutes.</p>`,
-  ),
+  subject: `${code} is your ${brand.name} sign-in code`,
+  text: [
+    `Your sign-in code for ${brand.name} is ${code}.`,
+    '',
+    'Enter it in Huddle to sign in. It works once and expires in 5 minutes.',
+    '',
+    'If you didn’t try to sign in, you can ignore this email: nobody can sign in without the code.',
+  ].join('\n'),
+  html: renderEmail(brand, {
+    preheader: `${code} is your code. It expires in 5 minutes.`,
+    heading: 'Your sign-in code',
+    blocks: [
+      { type: 'text', text: `Enter this code to sign in to ${brand.name}:` },
+      { type: 'code', code },
+      { type: 'text', text: 'It works once and expires in 5 minutes.', muted: true },
+    ],
+    footer: 'If you didn’t try to sign in, you can ignore this email: nobody can sign in without the code.',
+  }),
 });
 
-export const magicLinkEmail = (to: string, url: string, workspaceName: string): Email => ({
+export const magicLinkEmail = (to: string, url: string, brand: EmailBrand): Email => ({
   to,
-  subject: `Sign in to ${workspaceName}`,
-  text: `Open this link to sign in to ${workspaceName}:\n${url}\nIt works once and expires in 5 minutes.`,
-  html: layout(
-    `<p><a href="${escapeHtml(url)}" style="display:inline-block;background:#00b18c;color:#151515;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:600">Sign in to ${escapeHtml(workspaceName)}</a></p><p>It works once and expires in 5 minutes.</p>`,
-  ),
+  subject: `Sign in to ${brand.name}`,
+  text: `Open this link to sign in to ${brand.name}:\n${url}\n\nIt works once and expires in 5 minutes.\nIf you didn’t ask for it, you can ignore this email.`,
+  html: renderEmail(brand, {
+    preheader: 'Your sign-in link. It expires in 5 minutes.',
+    heading: `Sign in to ${brand.name}`,
+    blocks: [
+      { type: 'text', text: 'Use the button to sign in. It works once and expires in 5 minutes.' },
+      { type: 'button', label: `Sign in to ${brand.name}`, url },
+      { type: 'link', label: 'Or open this link:', url },
+    ],
+    footer: 'If you didn’t ask to sign in, you can ignore this email.',
+  }),
 });
 
 export const invitationEmail = (
   to: string,
   url: string,
-  workspaceName: string,
+  brand: EmailBrand,
   inviterName: string,
   asGuest: boolean,
 ): Email => ({
   to,
-  subject: `${inviterName} invited you to ${workspaceName} on Huddle`,
-  text: `${inviterName} invited you to join ${workspaceName}${asGuest ? ' as a guest' : ''}.\nAccept here: ${url}\nThe link expires in 7 days.`,
-  html: layout(
-    `<p>${escapeHtml(inviterName)} invited you to join <strong>${escapeHtml(workspaceName)}</strong>${asGuest ? ' as a guest' : ''}.</p><p><a href="${escapeHtml(url)}" style="display:inline-block;background:#00b18c;color:#151515;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:600">Accept invitation</a></p><p>The link expires in 7 days.</p>`,
-  ),
+  subject: `${inviterName} invited you to ${brand.name} on Huddle`,
+  text: [
+    `${inviterName} invited you to join ${brand.name}${asGuest ? ' as a guest' : ''} on Huddle, the team’s chat.`,
+    '',
+    `Accept the invitation: ${url}`,
+    '',
+    'The link expires in 7 days. No password needed: you sign in with a code sent to this address.',
+  ].join('\n'),
+  html: renderEmail(brand, {
+    preheader: `Join ${brand.name} on Huddle.`,
+    heading: `${inviterName} invited you to ${brand.name}`,
+    blocks: [
+      {
+        type: 'text',
+        text: asGuest
+          ? `You’re invited as a guest: you’ll see only the conversations you’re added to.`
+          : `Join the team’s conversations, threads and files in one place.`,
+      },
+      { type: 'button', label: 'Accept invitation', url },
+      {
+        type: 'text',
+        text: 'No password needed: you sign in with a code sent to this address. The invitation expires in 7 days.',
+        muted: true,
+      },
+      { type: 'link', label: 'Or open this link:', url },
+    ],
+    footer: `You got this because ${inviterName} invited ${to}. If you weren’t expecting it, you can ignore it.`,
+  }),
+});
+
+export const testEmail = (to: string, brand: EmailBrand, from: string): Email => ({
+  to,
+  subject: `Email from ${brand.name} is working`,
+  text: `This is a test from ${brand.name}. Sign-in codes and email summaries will be sent from ${from}.`,
+  html: renderEmail(brand, {
+    preheader: 'Your workspace can send email.',
+    heading: 'Email is working',
+    blocks: [
+      { type: 'text', text: `Sign-in codes, invitations and email summaries will be sent from ${from}.` },
+      { type: 'button', label: `Open ${brand.name}`, url: brand.appUrl },
+    ],
+    footer: 'You got this because you asked for a test email in Admin › Email.',
+  }),
 });
