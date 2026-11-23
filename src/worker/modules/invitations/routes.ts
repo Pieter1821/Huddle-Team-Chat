@@ -133,7 +133,7 @@ export const invitationRoutes = new Hono<AppEnv>()
           db,
         },
       );
-      emailSent = await emailDeliveryConfigured(db);
+      emailSent = await emailDeliveryConfigured(db, config);
     } catch (err) {
       // The invitation stands; the inviter can still copy the link and share it another way.
       if (!(err instanceof AppError)) throw err;

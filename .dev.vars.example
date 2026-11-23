@@ -12,8 +12,13 @@ BETTER_AUTH_SECRET=
 # the address is always the connected Gmail account; only the name is used).
 EMAIL_FROM=
 
-# Email through your own Gmail: an OAuth client from your Google Cloud project (Web application),
-# with the Gmail API enabled. Then Admin > Email > Connect Gmail.
+# Email through your own Gmail, the simple way: the Gmail address and an app password for it
+# (Google account > Security > 2-Step Verification on > App passwords). Best a dedicated Gmail.
+GMAIL_ADDRESS=
+GMAIL_APP_PASSWORD=
+
+# Or, instead: an OAuth client from your Google Cloud project (Web application) with the Gmail API
+# enabled, then Admin > Email > Connect Gmail.
 GMAIL_CLIENT_ID=
 GMAIL_CLIENT_SECRET=
 

@@ -57,6 +57,8 @@ test('your settings, admin tools and conversation details', async ({ browser }) 
   await owner.getByRole('link', { name: 'Email' }).click();
   await expect(owner.getByText('Not connected. On this computer')).toBeVisible();
   await expect(owner.getByRole('link', { name: 'Connect Gmail' })).toBeHidden(); // no Gmail client set here
+  await expect(owner.getByText('myaccount.google.com/apppasswords')).toBeVisible(); // the simple way first
+  await owner.getByText('Or use a Google Cloud project instead').click();
   await expect(owner.getByText('http://localhost:8790/api/email/google/callback')).toBeVisible();
 
   // Admin › Webhooks: the URL is shown once and really posts into the channel.

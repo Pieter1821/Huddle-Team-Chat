@@ -92,11 +92,17 @@
       "APP_URL": {
         "description": "Leave **empty**: Huddle uses the address it's opened at. Set it only once you give Huddle its own domain, e.g. `https://chat.example.com`."
       },
+      "GMAIL_ADDRESS": {
+        "description": "The Gmail address Huddle sends sign-in codes from (a dedicated one like `acme.huddle@gmail.com` is best). Can be added after deploying: Huddle's sign-in page shows how."
+      },
+      "GMAIL_APP_PASSWORD": {
+        "description": "An **app password** for that Gmail (Google account \u203a Security \u203a 2-Step Verification on \u203a App passwords). Can be added after deploying."
+      },
       "GMAIL_CLIENT_ID": {
-        "description": "Can be left empty for now. After deploying, open Huddle: its sign-in page shows how to create this in your own free Google Cloud project (about 10 minutes)."
+        "description": "Leave empty: only for the alternative Google Cloud way of connecting Gmail."
       },
       "GMAIL_CLIENT_SECRET": {
-        "description": "Leave empty for now, like `GMAIL_CLIENT_ID`; it comes from the same Google Cloud step."
+        "description": "Leave empty, like `GMAIL_CLIENT_ID`."
       },
       "EMAIL_FROM": {
         "description": "Optional. The name shown on emails, e.g. `Acme Huddle <x@example.com>` (only the name is used)."

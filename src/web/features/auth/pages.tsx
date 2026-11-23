@@ -8,7 +8,7 @@ import { ApiError, api } from '@/lib/api';
 import { useBranding, useMe, useSignOut } from '@/lib/queries';
 import type { InvitationPreview } from '@/lib/types';
 import { AuthLayout, FormError } from './auth-layout';
-import { GmailSetupSteps } from '@/components/gmail-setup-steps';
+import { AppPasswordSteps, GmailSetupSteps } from '@/components/gmail-setup-steps';
 import { GMAIL_RESULTS } from '@/lib/gmail-results';
 import { SignInForm } from './sign-in-form';
 
@@ -58,11 +58,17 @@ export function SignInPage() {
             </a>
           </Button>
         ) : (
-          <div className="space-y-3">
-            <p className="text-sm text-muted">
-              First, set up Gmail sending (once, about 10 minutes). Then reload this page.
-            </p>
-            <GmailSetupSteps redirectUri={`${window.location.origin}/api/email/google/callback`} />
+          <div className="space-y-4">
+            <p className="text-sm text-muted">Set up Gmail sending once (about 5 minutes):</p>
+            <AppPasswordSteps />
+            <details>
+              <summary className="cursor-pointer text-sm font-medium text-action">
+                Or use a Google Cloud project instead
+              </summary>
+              <div className="mt-3">
+                <GmailSetupSteps redirectUri={`${window.location.origin}/api/email/google/callback`} />
+              </div>
+            </details>
           </div>
         )}
       </AuthLayout>
