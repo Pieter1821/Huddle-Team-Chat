@@ -19,7 +19,7 @@ import { newId } from '../../lib/id';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import type { ImportedMessage } from '../../realtime/conversation-room';
-import { auditInsert, recordAudit } from '../audit/audit';
+import { auditInsert, recordAudit, requestMeta } from '../audit/audit';
 import { normalizeChannelName, roomFor, unwrap } from '../conversations/service';
 import { MAX_UPLOAD_BYTES } from '../files/routes';
 import { cleanFileName, detectType } from '../files/sniff';
@@ -131,7 +131,12 @@ export const importRoutes = new Hono<AppEnv>()
     const id = newId();
     await db.batch([
       db.insert(importSession).values({ id, createdBy: actor.userId }),
-      auditInsert(db, { action: 'import.started', actorId: actor.userId, targetId: id }),
+      auditInsert(db, {
+        ...requestMeta(c),
+        action: 'import.started',
+        actorId: actor.userId,
+        targetId: id,
+      }),
     ]);
     return c.json({ sessionId: id, dailyMessageLimit: IMPORT_DAILY_MESSAGES }, 201);
   })
@@ -320,6 +325,42 @@ export const importRoutes = new Hono<AppEnv>()
               ]),
             );
             result.push({ slackId: ch.slackId, conversationId: earlier.conversationId, name: null });
+            continue;
+          }
+        }
+        // Slack's #general becomes Huddle's #general when nobody has written there yet (the usual
+        // case: teams import right after installing). Once people are talking in it, the history
+        // goes to its own channel instead, so older Slack messages don't land after newer ones.
+        if (!isDm && ch.name?.toLowerCase() === 'general') {
+          const general = await db.query.conversation.findFirst({
+            where: and(
+              eq(conversation.workspaceId, actor.workspaceId),
+              eq(conversation.name, 'general'),
+              eq(conversation.kind, 'public'),
+            ),
+            columns: { id: true },
+          });
+          const quiet =
+            general &&
+            !(await db.query.message.findFirst({
+              where: eq(message.conversationId, general.id),
+              columns: { id: true },
+            }));
+          if (general && quiet) {
+            await db.batch(
+              nonEmpty([
+                ...memberIds.map((userId) =>
+                  db
+                    .insert(conversationMember)
+                    .values({ conversationId: general.id, userId })
+                    .onConflictDoNothing(),
+                ),
+                db
+                  .insert(importConversationMap)
+                  .values({ sessionId: session.id, slackId: ch.slackId, conversationId: general.id }),
+              ]),
+            );
+            result.push({ slackId: ch.slackId, conversationId: general.id, name: 'general' });
             continue;
           }
         }
@@ -539,7 +580,12 @@ export const importRoutes = new Hono<AppEnv>()
       .update(importSession)
       .set({ status: 'finished', finishedAt: new Date() })
       .where(eq(importSession.id, session.id));
-    await recordAudit(db, { action: 'import.finished', actorId: actor.userId, targetId: session.id });
+    await recordAudit(db, {
+      ...requestMeta(c),
+      action: 'import.finished',
+      actorId: actor.userId,
+      targetId: session.id,
+    });
     return c.json({ finished: true });
   });
 

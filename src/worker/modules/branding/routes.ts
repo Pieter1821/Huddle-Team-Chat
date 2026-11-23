@@ -11,7 +11,7 @@ import {
 import { workspace } from '../../db/schema';
 import { AppError, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
-import { auditInsert } from '../audit/audit';
+import { auditInsert, requestMeta } from '../audit/audit';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
 import { detectType } from '../files/sniff';
@@ -91,6 +91,7 @@ export const logoRoutes = new Hono<AppEnv>()
     await db.batch([
       db.update(workspace).set({ logoFileId: key }).where(eq(workspace.id, actor.workspaceId)),
       auditInsert(db, {
+        ...requestMeta(c),
         action: 'workspace.logo_changed',
         actorId: actor.userId,
         targetId: actor.workspaceId,
@@ -108,6 +109,7 @@ export const logoRoutes = new Hono<AppEnv>()
     await db.batch([
       db.update(workspace).set({ logoFileId: null }).where(eq(workspace.id, actor.workspaceId)),
       auditInsert(db, {
+        ...requestMeta(c),
         action: 'workspace.logo_removed',
         actorId: actor.userId,
         targetId: actor.workspaceId,

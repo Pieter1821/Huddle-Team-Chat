@@ -8,6 +8,7 @@ import { ApiError, api } from '@/lib/api';
 import { useBranding, useMe, useSignOut } from '@/lib/queries';
 import type { InvitationPreview } from '@/lib/types';
 import { AuthLayout, FormError } from './auth-layout';
+import { GmailSetupSteps } from '@/components/gmail-setup-steps';
 import { GMAIL_RESULTS } from '@/lib/gmail-results';
 import { SignInForm } from './sign-in-form';
 
@@ -45,10 +46,12 @@ export function SignInPage() {
             </a>
           </Button>
         ) : (
-          <p className="text-sm text-muted">
-            This server isn’t set up for Gmail yet: add <code>GMAIL_CLIENT_ID</code> and{' '}
-            <code>GMAIL_CLIENT_SECRET</code> to its settings (see the setup guide), then reload.
-          </p>
+          <div className="space-y-3">
+            <p className="text-sm text-muted">
+              First, set up Gmail sending (once, about 10 minutes). Then reload this page.
+            </p>
+            <GmailSetupSteps redirectUri={`${window.location.origin}/api/email/google/callback`} />
+          </div>
         )}
       </AuthLayout>
     );

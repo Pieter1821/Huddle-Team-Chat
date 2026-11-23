@@ -7,7 +7,11 @@ const optional = z
   .transform((v) => (v ? v : undefined));
 
 const schema = z.object({
-  APP_URL: z.url({ message: 'APP_URL must be the full URL Huddle is served from' }),
+  // Optional: without it Huddle uses the address it's reached at (e.g. right after a one-click
+  // deploy, before anyone knows the workers.dev address).
+  APP_URL: z
+    .union([z.literal(''), z.url({ message: 'APP_URL must be the full URL Huddle is served from' })])
+    .optional(),
   ADMIN_EMAIL: z.email({ message: 'ADMIN_EMAIL must be the email address of the first owner' }),
   BETTER_AUTH_SECRET: z.string().min(32, 'BETTER_AUTH_SECRET must be at least 32 characters'),
   EMAIL_FROM: optional,
@@ -32,16 +36,22 @@ export type Config = {
   emailName: string;
 };
 
-export function getConfig(env: Env): Config {
+/**
+ * The settings, with `origin` (the address a request arrived at, or the one stored at setup for
+ * background work) used when APP_URL isn't set.
+ */
+export function getConfig(env: Env, origin?: string | null): Config {
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
     const problems = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Huddle is misconfigured: ${problems}`);
   }
   const v = parsed.data;
-  const host = new URL(v.APP_URL).hostname;
+  const appUrl = v.APP_URL || origin;
+  if (!appUrl) throw new Error('Huddle is misconfigured: APP_URL is not set and no address is known yet');
+  const host = new URL(appUrl).hostname;
   return {
-    appUrl: v.APP_URL.replace(/\/$/, ''),
+    appUrl: appUrl.replace(/\/$/, ''),
     adminEmail: v.ADMIN_EMAIL.toLowerCase(),
     authSecret: v.BETTER_AUTH_SECRET,
     isLocal: host === 'localhost' || host === '127.0.0.1',

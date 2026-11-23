@@ -256,4 +256,13 @@ describe('admin changes in the security log', () => {
     const token = (created.json.url as string).split('/').at(-1)!;
     expect(JSON.stringify(await entries())).not.toContain(token);
   });
+
+  it('records where admin actions came from (IP address and browser)', async () => {
+    const owner = await setupWorkspace();
+    await api('/api/workspace', { method: 'PATCH', body: { name: 'Brightwater' }, cookie: owner.cookie });
+    const row = await env.DB.prepare(
+      "SELECT ip_address AS ip FROM audit_log WHERE action = 'workspace.updated'",
+    ).first<{ ip: string | null }>();
+    expect(row?.ip).toBe('203.0.113.1'); // the test helper's cf-connecting-ip
+  });
 });

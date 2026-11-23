@@ -6,7 +6,7 @@ import { forbidden } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
-import { auditInsert } from '../audit/audit';
+import { auditInsert, requestMeta } from '../audit/audit';
 import { accentSchema } from '../branding/routes';
 
 export const displayName = z.string().trim().min(1).max(80);
@@ -79,6 +79,7 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
         accent: workspace.accent,
       }),
       auditInsert(db, {
+        ...requestMeta(c),
         action: 'workspace.updated',
         actorId: actor.userId,
         targetId: actor.workspaceId,

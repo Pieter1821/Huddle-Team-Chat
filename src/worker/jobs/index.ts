@@ -64,6 +64,19 @@ export async function cleanup(env: Env, db: Db, now = new Date()) {
   return { orphanFiles, republished: stuck.length };
 }
 
+/**
+ * The settings for work without a request: APP_URL, or the address Huddle was set up at. Null
+ * before setup (there is nothing to email or push yet).
+ */
+async function backgroundConfig(env: Env, db: Db) {
+  const ws = await db.query.workspace.findFirst({ columns: { appUrl: true } });
+  try {
+    return getConfig(env, ws?.appUrl);
+  } catch {
+    return null;
+  }
+}
+
 /** Cron: once an hour. */
 export async function scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
   const db = getDb(env);
@@ -79,7 +92,11 @@ export async function scheduled(_controller: ScheduledController, env: Env, ctx:
  */
 export async function queue(batch: MessageBatch<NotificationJob>, env: Env) {
   const db = getDb(env);
-  const config = getConfig(env);
+  const config = await backgroundConfig(env, db);
+  if (!config) {
+    for (const message of batch.messages) message.ack(); // not set up yet: nothing to send
+    return;
+  }
   for (const message of batch.messages) {
     const job = message.body;
     if ('type' in job) {

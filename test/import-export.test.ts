@@ -72,7 +72,7 @@ describe('importing a Slack export', () => {
     expect((await signIn('marlize@old.example')).cookie).toBe('');
   });
 
-  it('imports channels (renaming clashes), messages, threads, reactions and mentions', async () => {
+  it('imports channels, messages, threads, reactions and mentions', async () => {
     const { owner, jaco, sid, call } = await startImport();
     const channels = await call('channels', {
       channels: [
@@ -81,7 +81,11 @@ describe('importing a Slack export', () => {
       ],
     });
     const general = channels.json.channels[0];
-    expect(general.name).toBe('general-imported'); // #general already exists
+    // Nobody has written in Huddle's #general yet, so Slack's #general becomes it.
+    const huddleGeneral = (await api('/api/conversations', { cookie: owner.cookie })).json.conversations.find(
+      (c: { name: string }) => c.name === 'general',
+    );
+    expect(general).toMatchObject({ name: 'general', conversationId: huddleGeneral.id });
 
     const res = await call('messages', {
       channelSlackId: 'C1',
@@ -122,6 +126,22 @@ describe('importing a Slack export', () => {
       conversations: 2,
       messages: 2,
     });
+  });
+
+  it('keeps Slack’s #general separate once people are talking in Huddle’s #general', async () => {
+    const { owner, call } = await startImport();
+    const huddleGeneral = (await api('/api/conversations', { cookie: owner.cookie })).json.conversations.find(
+      (c: { name: string }) => c.name === 'general',
+    );
+    await api(`/api/conversations/${huddleGeneral.id}/messages`, {
+      body: { body: 'Already chatting here', clientMsgId: 'before-import-1' },
+      cookie: owner.cookie,
+    });
+    const channels = await call('channels', {
+      channels: [{ slackId: 'C1', kind: 'public', name: 'general', memberSlackIds: ['U1'] }],
+    });
+    expect(channels.json.channels[0].name).toBe('general-imported');
+    expect(channels.json.channels[0].conversationId).not.toBe(huddleGeneral.id);
   });
 
   it('records one history.imported event per batch, and re-running a batch imports nothing twice', async () => {

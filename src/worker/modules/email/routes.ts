@@ -9,7 +9,7 @@ import { testEmail } from '../auth/emails';
 import { AppError, forbidden } from '../../lib/errors';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
-import { recordAudit } from '../audit/audit';
+import { recordAudit, requestMeta } from '../audit/audit';
 import { authorizationUrl, exchangeCode, getAccount, redirectUri, removeAccount, saveAccount } from './gmail';
 
 const STATE_COOKIE = 'huddle_gmail_state';
@@ -108,10 +108,9 @@ export const emailRoutes = new Hono<AppEnv>()
       connectedBy: actorId,
     });
     await recordAudit(db, {
+      ...requestMeta(c),
       action: 'email.connected',
       actorId,
-      ipAddress: c.req.header('cf-connecting-ip') ?? null,
-      userAgent: c.req.header('user-agent') ?? null,
       meta: { address: connected.address },
     });
     return done('connected');
@@ -153,10 +152,9 @@ export const emailAdminRoutes = new Hono<AppEnv>()
     if (account) {
       await removeAccount(db);
       await recordAudit(db, {
+        ...requestMeta(c),
         action: 'email.disconnected',
         actorId: actor.userId,
-        ipAddress: c.req.header('cf-connecting-ip') ?? null,
-        userAgent: c.req.header('user-agent') ?? null,
         meta: { address: account.address },
       });
     }

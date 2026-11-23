@@ -40,7 +40,7 @@ export default tseslint.config(
   },
   {
     // The many-people test is a plain Node script (Node's own fetch, WebSocket and timers).
-    files: ['e2e/scale/**/*.mjs'],
+    files: ['e2e/scale/**/*.mjs', 'scripts/**/*.mjs'],
     languageOptions: {
       globals: {
         fetch: 'readonly',
@@ -72,8 +72,8 @@ export default tseslint.config(
     extends: [tseslint.configs.disableTypeChecked],
   },
   {
-    // The plain Node script that starts the app for end-to-end tests.
-    files: ['e2e/**/*.mjs'],
+    // Plain Node scripts: starting the app for end-to-end tests, and deploying.
+    files: ['e2e/**/*.mjs', 'scripts/**/*.mjs'],
     extends: [tseslint.configs.disableTypeChecked],
     languageOptions: { globals: { process: 'readonly' } },
   },

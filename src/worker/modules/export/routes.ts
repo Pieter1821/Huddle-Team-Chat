@@ -8,7 +8,7 @@ import { forbidden, notFound } from '../../lib/errors';
 import { queryParams } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import type { Actor } from '../access/access';
-import { recordAudit } from '../audit/audit';
+import { recordAudit, requestMeta } from '../audit/audit';
 import { withReactions } from '../conversations/reactions';
 
 /**
@@ -62,7 +62,12 @@ export const exportRoutes = new Hono<AppEnv>()
       WHERE c.workspace_id = ${actor.workspaceId}
         ${includeDms ? sql`` : sql`AND c.kind IN ('public', 'private')`}
       ORDER BY c.created_at`);
-    await recordAudit(db, { action: 'export.started', actorId: actor.userId, meta: { includeDms } });
+    await recordAudit(db, {
+      ...requestMeta(c),
+      action: 'export.started',
+      actorId: actor.userId,
+      meta: { includeDms },
+    });
     return c.json({
       ...EXPORT_FORMAT,
       exportedAt: new Date().toISOString(),

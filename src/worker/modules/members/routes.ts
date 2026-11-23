@@ -6,7 +6,7 @@ import { forbidden, notFound } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { canChangeRole, canDeactivate, isAdmin, type Actor } from '../access/access';
-import { auditInsert } from '../audit/audit';
+import { auditInsert, requestMeta } from '../audit/audit';
 import type { Db } from '../../db/client';
 import { hubFor } from '../../realtime/workspace-hub';
 import { roomFor } from '../conversations/service';
@@ -103,6 +103,7 @@ export const memberRoutes = new Hono<AppEnv>()
             ),
           ),
         auditInsert(db, {
+          ...requestMeta(c),
           action: 'member.role_changed',
           actorId: actor.userId,
           targetId: target.userId,
@@ -126,7 +127,12 @@ export const memberRoutes = new Hono<AppEnv>()
           and(eq(workspaceMember.userId, target.userId), eq(workspaceMember.workspaceId, actor.workspaceId)),
         ),
       db.delete(session).where(eq(session.userId, target.userId)),
-      auditInsert(db, { action: 'member.deactivated', actorId: actor.userId, targetId: target.userId }),
+      auditInsert(db, {
+        ...requestMeta(c),
+        action: 'member.deactivated',
+        actorId: actor.userId,
+        targetId: target.userId,
+      }),
     ]);
     // Sessions are gone; also end every live connection right now, not at the next reconnect.
     const rooms = await db
@@ -151,7 +157,12 @@ export const memberRoutes = new Hono<AppEnv>()
         .where(
           and(eq(workspaceMember.userId, target.userId), eq(workspaceMember.workspaceId, actor.workspaceId)),
         ),
-      auditInsert(db, { action: 'member.reactivated', actorId: actor.userId, targetId: target.userId }),
+      auditInsert(db, {
+        ...requestMeta(c),
+        action: 'member.reactivated',
+        actorId: actor.userId,
+        targetId: target.userId,
+      }),
     ]);
     return c.json({ member: { userId: target.userId, status: 'active' } });
   });
