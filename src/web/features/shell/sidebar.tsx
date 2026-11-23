@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { Hash, Lock, LogOut, Plus, Search } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router';
+import { Hash, Lock, LogOut, Plus, Search, ShieldCheck } from 'lucide-react';
+import { Link, NavLink, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { conversationLabel, useConversations, useMe, useSignOut } from '@/lib/queries';
 import type { SidebarConversation } from '@/lib/types';
@@ -94,7 +94,13 @@ export function Sidebar({ className }: { className?: string }) {
         )}
       </div>
 
-      {me && <YouCard name={me.user.name} email={me.user.email} />}
+      {me && (
+        <YouCard
+          name={me.user.name}
+          email={me.user.email}
+          isAdmin={me.role === 'owner' || me.role === 'admin'}
+        />
+      )}
 
       <Suspense fallback={null}>
         {open === 'search' && <SearchDialog {...dialog('search')} />}
@@ -190,21 +196,34 @@ function ConversationLink({ conversation: c, label }: { conversation: SidebarCon
   );
 }
 
-function YouCard({ name, email }: { name: string; email: string }) {
+function YouCard({ name, email, isAdmin }: { name: string; email: string; isAdmin: boolean }) {
   const signOut = useSignOut();
   const navigate = useNavigate();
   return (
-    <footer className="flex shrink-0 items-center gap-3 border-t border-rule px-4 py-3">
-      <span
-        aria-hidden
-        className="grid size-8 shrink-0 place-items-center rounded-full bg-bronze text-sm font-semibold"
+    <footer className="flex shrink-0 items-center gap-1 border-t border-rule px-2 py-2">
+      {/* You: opens your settings. */}
+      <Link
+        to="/settings"
+        title="Your settings"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 hover:bg-active"
       >
-        {name.charAt(0).toUpperCase()}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="block truncate text-sm font-medium">{name}</span>
-        <span className="block truncate text-xs text-meta">{email}</span>
-      </span>
+        <span
+          aria-hidden
+          className="grid size-8 shrink-0 place-items-center rounded-full bg-bronze text-sm font-semibold"
+        >
+          {name.charAt(0).toUpperCase()}
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-sm font-medium">{name}</span>
+          <span className="block truncate text-xs text-meta">{email}</span>
+        </span>
+        <span className="sr-only">, your settings</span>
+      </Link>
+      {isAdmin && (
+        <Link to="/admin" aria-label="Admin" title="Admin" className={iconLink}>
+          <ShieldCheck aria-hidden className="size-4" />
+        </Link>
+      )}
       <Button
         variant="quiet"
         size="icon"
@@ -248,3 +267,6 @@ function AddButton({ label, ...props }: { label: string } & React.ComponentProps
     </button>
   );
 }
+
+const iconLink =
+  'grid size-9 shrink-0 place-items-center rounded-pill text-muted hover:bg-active hover:text-ink';
