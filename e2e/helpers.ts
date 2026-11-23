@@ -1,5 +1,5 @@
-import { readFileSync } from 'node:fs';
-import { expect, type Page } from '@playwright/test';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { expect, type Cookie, type Page } from '@playwright/test';
 
 export const LOG_FILE = '.wrangler/e2e/server.log';
 // Its own port, so the tests can run while `npm run dev` is using 8787.
@@ -44,9 +44,21 @@ export async function signInViaApi(page: Page, email: string) {
   expect(res.ok(), await res.text()).toBe(true);
 }
 
-/** The owner, signed in, with the workspace set up (by an earlier test file or right now). */
+const OWNER_COOKIES = '.wrangler/e2e/owner-cookies.json';
+
+/**
+ * The owner, signed in, with the workspace set up (by an earlier test file or right now). The owner
+ * signs in once per run and later tests reuse that session: sign-in codes are limited to a few an
+ * hour per address, and every test file needs the owner.
+ */
 export async function signInOwner(page: Page) {
+  if (existsSync(OWNER_COOKIES)) {
+    await page.context().addCookies(JSON.parse(readFileSync(OWNER_COOKIES, 'utf8')) as Cookie[]);
+    if ((await page.request.get('/api/me')).ok()) return;
+    await page.context().clearCookies();
+  }
   await signInViaApi(page, ADMIN_EMAIL);
+  writeFileSync(OWNER_COOKIES, JSON.stringify(await page.context().cookies()));
   const status = (await (await page.request.get('/api/setup')).json()) as { needsSetup: boolean };
   if (status.needsSetup) {
     const res = await page.request.post('/api/setup', {

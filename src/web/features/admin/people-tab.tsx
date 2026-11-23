@@ -282,18 +282,18 @@ function MembersCard({ me }: { me: Me }) {
             (r) => r === m.role || canChangeRole(me, m, r),
           );
           return (
-            <li
-              key={m.userId}
-              className={cn('flex flex-wrap items-center gap-x-4 gap-y-2 py-3', off && 'opacity-60')}
-            >
+            <li key={m.userId} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3">
               <span
                 aria-hidden
-                className="grid size-9 shrink-0 place-items-center rounded-full bg-bronze text-sm font-semibold"
+                className={cn(
+                  'grid size-9 shrink-0 place-items-center rounded-full bg-bronze text-sm font-semibold',
+                  off && 'opacity-50', // only the decorative initial fades; text keeps full contrast
+                )}
               >
                 {(m.name || '?').charAt(0).toUpperCase()}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[15px] font-medium">
+                <span className={cn('block truncate text-[15px] font-medium', off && 'text-muted')}>
                   {m.name || 'No name yet'}
                   {m.userId === me.user.id && <span className="font-normal text-meta"> (you)</span>}
                 </span>

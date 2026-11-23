@@ -58,6 +58,21 @@ export function ConversationView({
     [members.byId, members.isPending, me.user.name, myId],
   );
 
+  // Someone who joined after the member list was loaded (or wrote you a first DM) would otherwise
+  // show as "Former member" until the list refreshed: look them up once.
+  const lookedUp = useRef(new Set<string>());
+  const { data: memberList, isFetching: membersFetching, refetch: refetchMembers } = members;
+  useEffect(() => {
+    if (!memberList || membersFetching) return;
+    const known = new Set(memberList.map((x) => x.userId));
+    const unknown = messages
+      .map((m) => m.authorId)
+      .filter((id): id is string => !!id && id !== myId && !known.has(id) && !lookedUp.current.has(id));
+    if (!unknown.length) return;
+    for (const id of unknown) lookedUp.current.add(id);
+    void refetchMembers();
+  }, [messages, memberList, membersFetching, refetchMembers, myId]);
+
   useMarkRead(c, feed.data?.lastSeq ?? 0, atBottom && feed.isSuccess);
 
   const actions: MessageActions = useMemo(
@@ -188,6 +203,7 @@ export function ConversationView({
             editingId={editingId}
             setEditingId={setEditingId}
             nameOf={nameOf}
+            namesLoading={membersFetching}
             isAppMessage={(m) => Boolean(m.webhookId)}
             actions={actions}
             onAtBottomChange={setAtBottom}

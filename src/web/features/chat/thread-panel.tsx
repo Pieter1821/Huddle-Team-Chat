@@ -7,6 +7,7 @@ import type { MessageDto } from '../../../shared/events';
 import { Composer, type Mentionable } from './composer';
 import type { FeedMessage, Thread } from './feed-state';
 import { MessageItem, type MessageActions } from './message-item';
+import { useRovingMessages } from './roving';
 import { newClientMsgId, sendMessage, threadKey } from './use-feed';
 
 /**
@@ -48,6 +49,7 @@ export function ThreadPanel({
   const [alsoInChannel, setAlsoInChannel] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const bottom = useRef<HTMLDivElement>(null);
+  const scroller = useRovingMessages();
   const back = `/c/${conversationId}`;
   const replies = thread.data?.replies ?? [];
 
@@ -88,7 +90,7 @@ export function ThreadPanel({
           </p>
         </div>
       ) : (
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
           <ThreadMessage
             m={thread.data.parent}
             {...{ myId, isAdmin, nameOf, actions, editingId, setEditingId }}
@@ -145,7 +147,7 @@ export function ThreadPanel({
                   type="checkbox"
                   checked={alsoInChannel}
                   onChange={(e) => setAlsoInChannel(e.target.checked)}
-                  className="size-4 accent-[var(--color-action)]"
+                  className="m-0.5 size-5 shrink-0 accent-[var(--color-action)]"
                 />
                 Also send to {channelLabel}
               </label>

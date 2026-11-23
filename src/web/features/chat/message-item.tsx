@@ -57,8 +57,9 @@ export function MessageItem({
   return (
     <article
       aria-label={`${authorName}, ${full.format(created)}`}
-      // Focusable so touch and keyboard users can reach the actions that appear on hover.
-      tabIndex={0}
+      // Focusable so touch and keyboard users can reach the actions that appear on hover. One
+      // message in a list is the tab stop at a time (see useRovingMessages).
+      tabIndex={-1}
       className={cn(
         'group relative flex gap-3 px-5 transition-colors duration-100 outline-none hover:bg-raised/60 focus-within:bg-raised/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action',
         grouped ? 'py-0.5' : 'pt-3 pb-0.5',

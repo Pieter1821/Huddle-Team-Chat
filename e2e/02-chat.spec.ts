@@ -4,7 +4,7 @@ import { ORIGIN, addMember, conversationId, signInOwner } from './helpers';
 test.describe.configure({ mode: 'serial' });
 
 const composer = (page: Page) => page.getByRole('textbox', { name: 'Message #general' });
-const log = (page: Page) => page.getByRole('log', { name: 'Messages' });
+const log = (page: Page) => page.getByRole('region', { name: 'Messages' });
 
 test('two people chat live: messages, typing, reactions, edits, deletes and badges', async ({ browser }) => {
   const owner = await (await browser.newContext()).newPage();
@@ -67,7 +67,7 @@ test('two people chat live: messages, typing, reactions, edits, deletes and badg
   });
   expect(res.status()).toBe(201);
   const link = kai.getByRole('navigation', { name: 'Conversations' }).getByRole('link', { name: /general/ });
-  await expect(link).toHaveAccessibleName('general, 1 mention');
+  await expect(link).toHaveAccessibleName('general (1 mention)');
 
   // Opening it shows the "New" marker, the mention by name, and clears the badge; the server
   // remembers, so it stays cleared after a reload.

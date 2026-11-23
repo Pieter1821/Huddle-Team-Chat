@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect } from 'react';
 import { Link, Route, Routes, useMatch, useNavigate, useParams } from 'react-router';
 import { ErrorBoundary } from '@/components/error-boundary';
 import { clearNotifications, onNotificationOpen } from '@/lib/pwa';
-import { useConversation, useConversations, useMe } from '@/lib/queries';
+import { conversationLabel, useBranding, useConversation, useConversations, useMe } from '@/lib/queries';
 import type { SidebarConversation } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
@@ -35,15 +35,27 @@ export function Shell() {
     onNotificationOpen((url) => void navigate(url));
     return () => onNotificationOpen(null);
   }, [navigate]);
+  useDocumentTitle(match?.params.id, onSettings ? 'Your settings' : onAdmin ? 'Admin' : null);
   return (
     <div className="flex h-dvh">
+      {/* The first thing Tab reaches: past the sidebar, straight to what's open. */}
+      <a
+        href="#main"
+        className="sr-only z-50 rounded-pill bg-action px-4 py-2 text-sm font-semibold text-action-ink focus:not-sr-only focus:fixed focus:top-3 focus:left-3"
+      >
+        Skip to {match ? 'conversation' : 'main content'}
+      </a>
       <Sidebar
         className={cn(
           'w-full md:w-[272px] md:shrink-0 md:border-r md:border-rule',
           inConversation && 'hidden md:flex',
         )}
       />
-      <main className={cn('min-w-0 flex-1 flex-col', inConversation ? 'flex' : 'hidden md:flex')}>
+      <main
+        id="main"
+        tabIndex={-1}
+        className={cn('min-w-0 flex-1 flex-col outline-none', inConversation ? 'flex' : 'hidden md:flex')}
+      >
         <Routes>
           <Route path="/c/:id" element={<ConversationPane />} />
           <Route path="/c/:id/t/:threadId" element={<ConversationPane />} />
@@ -70,6 +82,31 @@ export function Shell() {
       </main>
     </div>
   );
+}
+
+/**
+ * The browser tab names what's open (screen readers announce it when you move between
+ * conversations) and counts unread mentions and direct messages, so a background tab shows them.
+ */
+function useDocumentTitle(conversationId: string | undefined, page: string | null) {
+  const { data: me } = useMe();
+  const { data: conversations } = useConversations();
+  const { data: branding } = useBranding();
+  const workspace = branding?.name ?? 'Huddle';
+  const open = conversations?.find((c) => c.id === conversationId);
+  const where = open
+    ? open.kind === 'public' || open.kind === 'private'
+      ? `#${conversationLabel(open, me?.user.id)}`
+      : conversationLabel(open, me?.user.id)
+    : page;
+  const waiting = (conversations ?? []).reduce(
+    (n, c) => n + (c.kind === 'dm' || c.kind === 'group_dm' ? c.unread : c.mentions),
+    0,
+  );
+  const title = `${waiting ? `(${waiting}) ` : ''}${where ? `${where} · ` : ''}${workspace}`;
+  useEffect(() => {
+    document.title = title;
+  }, [title]);
 }
 
 function NothingOpen() {

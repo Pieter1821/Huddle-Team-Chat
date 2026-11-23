@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 're
 import { ArrowDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { FeedMessage } from './feed-state';
+import { plainText } from './format';
 import { MessageItem, type MessageActions } from './message-item';
+import { useRovingMessages } from './roving';
 
 const GROUP_WITHIN_MS = 5 * 60_000;
 const NEAR_BOTTOM_PX = 120;
@@ -23,6 +25,7 @@ export function MessageList({
   editingId,
   setEditingId,
   nameOf,
+  namesLoading = false,
   isAppMessage,
   actions,
   onAtBottomChange,
@@ -38,6 +41,8 @@ export function MessageList({
   editingId: string | null;
   setEditingId: (id: string | null) => void;
   nameOf: (userId: string | null, m?: FeedMessage) => string;
+  /** True while names are being looked up; announcements wait for them. */
+  namesLoading?: boolean;
   isAppMessage: (m: FeedMessage) => boolean;
   actions: MessageActions;
   onAtBottomChange: (atBottom: boolean) => void;
@@ -49,6 +54,9 @@ export function MessageList({
   const [showJump, setShowJump] = useState(false);
   const prevFirstId = useRef<string | undefined>(undefined);
   const prevHeight = useRef(0);
+  const list = useRovingMessages();
+  const arrivals = useArrivals(messages, myId);
+  const announcement = namesLoading ? '' : describeArrivals(arrivals, nameOf);
 
   // Older page arrived above: keep the same message under your eyes. Otherwise stay pinned.
   useLayoutEffect(() => {
@@ -144,10 +152,15 @@ export function MessageList({
         ) : (
           intro
         )}
-        <div role="log" aria-label="Messages" aria-relevant="additions" className="pb-4">
+        {/* Not a live region: loading older messages would read them all out. New arrivals from
+            others are announced on their own, below. */}
+        <section ref={list} aria-label="Messages" aria-busy={loadingOlder} className="pb-4">
           {rows}
-        </div>
+        </section>
       </div>
+      <p aria-live="polite" className="sr-only">
+        {announcement}
+      </p>
       {showJump && (
         <button
           type="button"
@@ -160,6 +173,41 @@ export function MessageList({
       )}
     </div>
   );
+}
+
+/**
+ * Messages a screen reader should hear about: other people's new messages that arrived while you're
+ * here (not your own, and not older history loading above). Returns the latest batch.
+ */
+function useArrivals(messages: FeedMessage[], myId: string): FeedMessage[] {
+  const [arrived, setArrived] = useState<FeedMessage[]>([]);
+  const lastId = useRef<string | null>(null);
+  useEffect(() => {
+    const last = messages.at(-1);
+    const previous = lastId.current;
+    lastId.current = last?.id ?? null;
+    if (!previous || !last || last.id === previous) return; // first load, or nothing new at the end
+    const from = messages.findIndex((m) => m.id === previous);
+    if (from === -1) return;
+    const batch = messages.slice(from + 1).filter((m) => !m.pending && !m.deletedAt && m.authorId !== myId);
+    if (batch.length) setArrived(batch);
+  }, [messages, myId]);
+  return arrived;
+}
+
+function describeArrivals(
+  arrived: FeedMessage[],
+  nameOf: (userId: string | null, m?: FeedMessage) => string,
+): string {
+  if (!arrived.length) return '';
+  if (arrived.length > 3) return `${arrived.length} new messages`;
+  return arrived
+    .map((m) => {
+      const text = plainText(m.body, (id) => nameOf(id)).slice(0, 200);
+      const file = m.files?.length ? ' (with a file)' : '';
+      return `${nameOf(m.authorId, m)}: ${text || 'shared a file'}${text ? file : ''}`;
+    })
+    .join('. ');
 }
 
 function Divider({ label, accent }: { label: string; accent?: boolean }) {
