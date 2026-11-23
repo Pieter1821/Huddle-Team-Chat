@@ -21,6 +21,19 @@ const schema = z.object({
   GMAIL_CLIENT_SECRET: optional,
 });
 
+/**
+ * A required setting is missing or invalid. Carries the setting NAMES only (never values), so the
+ * app can say exactly what to fix instead of "Something went wrong".
+ */
+export class ConfigError extends Error {
+  constructor(
+    readonly settings: string[],
+    detail: string,
+  ) {
+    super(`Huddle is misconfigured: ${detail}`);
+  }
+}
+
 export type Config = {
   appUrl: string;
   adminEmail: string;
@@ -44,11 +57,11 @@ export function getConfig(env: Env, origin?: string | null): Config {
   const parsed = schema.safeParse(env);
   if (!parsed.success) {
     const problems = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
-    throw new Error(`Huddle is misconfigured: ${problems}`);
+    throw new ConfigError([...new Set(parsed.error.issues.map((i) => String(i.path[0])))], problems);
   }
   const v = parsed.data;
   const appUrl = v.APP_URL || origin;
-  if (!appUrl) throw new Error('Huddle is misconfigured: APP_URL is not set and no address is known yet');
+  if (!appUrl) throw new ConfigError(['APP_URL'], 'APP_URL is not set and no address is known yet');
   const host = new URL(appUrl).hostname;
   return {
     appUrl: appUrl.replace(/\/$/, ''),

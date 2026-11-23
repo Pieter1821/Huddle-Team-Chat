@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
 import { secureHeaders } from 'hono/secure-headers';
+import { ConfigError } from './config';
 import { AppError } from './lib/errors';
 import { withServices, type AppEnv } from './middleware/context';
 import { requireSameOrigin } from './middleware/origin';
@@ -99,6 +100,20 @@ app.onError((err, c) => {
   }
   if (err instanceof HTTPException) {
     return c.json({ error: { code: 'http_error', message: err.message } }, err.status);
+  }
+  if (err instanceof ConfigError) {
+    // Names of settings only, never their values: tells whoever is setting Huddle up what to fix.
+    console.error(err.message);
+    return c.json(
+      {
+        error: {
+          code: 'setup_incomplete',
+          message: `Huddle isn’t fully set up yet: check ${err.settings.join(', ')} in Cloudflare (Workers & Pages › your Worker › Settings › Variables and Secrets).`,
+          settings: err.settings,
+        },
+      },
+      503,
+    );
   }
   console.error('unhandled error', err);
   return c.json({ error: { code: 'internal', message: 'Something went wrong.' } }, 500);

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { env } from 'cloudflare:workers';
 import { getDb } from '../src/worker/db/client';
-import { getConfig } from '../src/worker/config';
+import { ConfigError, getConfig } from '../src/worker/config';
 import { emailDeliveryConfigured, sendEmail } from '../src/worker/lib/email';
 import { newId } from '../src/worker/lib/id';
 import { randomToken, sha256Hex } from '../src/worker/lib/crypto';
@@ -58,6 +58,19 @@ describe('getConfig', () => {
     // An APP_URL that is set always wins (e.g. a custom domain).
     expect(getConfig(baseEnv, 'https://huddle.acme.workers.dev').appUrl).toBe('https://chat.example.com');
     expect(() => getConfig({ ...baseEnv, APP_URL: '' })).toThrow(/APP_URL/);
+  });
+
+  it('names the settings that are missing or wrong, never their values', () => {
+    const err = (() => {
+      try {
+        getConfig({ ...baseEnv, ADMIN_EMAIL: '', BETTER_AUTH_SECRET: 'short-secret-value' });
+      } catch (e) {
+        return e;
+      }
+    })();
+    expect(err).toBeInstanceOf(ConfigError);
+    expect((err as ConfigError).settings.sort()).toEqual(['ADMIN_EMAIL', 'BETTER_AUTH_SECRET']);
+    expect((err as ConfigError).message).not.toContain('short-secret-value');
   });
 
   it('fails loudly with a readable message when misconfigured', () => {
