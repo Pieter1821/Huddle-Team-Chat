@@ -147,6 +147,61 @@ describe('importing a Slack export', () => {
     expect(imported[0].data).toMatchObject({ count: 2, toSeq: imported[0].data.fromSeq + 1 });
   });
 
+  it('importing the same export again (a new session) reuses its channels and adds only new messages', async () => {
+    const { owner, call, sid } = await startImport();
+    const channel = { slackId: 'C9', kind: 'public', name: 'roadmap', memberSlackIds: ['U1'] };
+    const first = (await call('channels', { channels: [channel] })).json.channels[0].conversationId as string;
+    const older = { ts: '1700000000.000001', user: 'U1', text: 'old news' };
+    expect((await call('messages', { channelSlackId: 'C9', messages: [older] })).json.imported).toBe(1);
+    await call('finish', {});
+
+    // A newer export: same channel, one more person, the old message plus a new one.
+    const sid2 = (await api('/api/import', { body: {}, cookie: owner.cookie })).json.sessionId as string;
+    expect(sid2).not.toBe(sid);
+    const again = (path: string, body: unknown) =>
+      api(`/api/import/${sid2}/${path}`, { body, cookie: owner.cookie });
+    await again('users', {
+      users: [
+        { slackId: 'U1', name: 'jaco', email: 'jaco@example.com' },
+        { slackId: 'U2', name: 'marlize', email: 'marlize@old.example' },
+      ],
+    });
+    const second = await again('channels', { channels: [{ ...channel, memberSlackIds: ['U1', 'U2'] }] });
+    expect(second.json.channels[0].conversationId).toBe(first);
+    const res = await again('messages', {
+      channelSlackId: 'C9',
+      messages: [older, { ts: '1700000500.000001', user: 'U2', text: 'new news' }],
+    });
+    expect(res.status).toBe(200);
+    expect(res.json).toMatchObject({ imported: 1 });
+
+    const names = await env.DB.prepare("SELECT name FROM conversation WHERE name LIKE 'roadmap%'").all<{
+      name: string;
+    }>();
+    expect(names.results.map((r) => r.name)).toEqual(['roadmap']);
+    const members = await env.DB.prepare(
+      'SELECT count(*) AS n FROM conversation_member WHERE conversation_id = ?',
+    )
+      .bind(first)
+      .first<{ n: number }>();
+    expect(members?.n).toBe(3); // the owner, jaco and marlize
+  });
+
+  it('keeps messages apart when one person posted in two channels at the same instant', async () => {
+    const { call } = await startImport();
+    await call('channels', {
+      channels: [
+        { slackId: 'C21', kind: 'public', name: 'one', memberSlackIds: ['U1'] },
+        { slackId: 'C22', kind: 'public', name: 'two', memberSlackIds: ['U1'] },
+      ],
+    });
+    const same = { ts: '1700000000.000001', user: 'U1', text: 'cross-posted' };
+    expect((await call('messages', { channelSlackId: 'C21', messages: [same] })).json.imported).toBe(1);
+    const second = await call('messages', { channelSlackId: 'C22', messages: [same] });
+    expect(second.status).toBe(200);
+    expect(second.json.imported).toBe(1);
+  });
+
   it('requires channels before their messages, and stops at the daily import allowance', async () => {
     const { call } = await startImport();
     expect(

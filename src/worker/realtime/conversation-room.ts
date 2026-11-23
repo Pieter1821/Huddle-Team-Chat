@@ -78,7 +78,7 @@ async function attempt<T>(work: () => Promise<T>): Promise<RoomResult<T>> {
 
 /** A historical message from an import, in Huddle format (already converted from Slack). */
 export type ImportedMessage = {
-  /** Stable per source message (e.g. slack-<ts>), so re-running an import skips it. */
+  /** Stable per source message (e.g. slack-<channel>-<ts>), so re-running an import skips it. */
   clientMsgId: string;
   authorId: string | null;
   body: string;
