@@ -11,6 +11,7 @@ import {
 import { workspace } from '../../db/schema';
 import { AppError, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
+import { auditInsert } from '../audit/audit';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
 import { detectType } from '../files/sniff';
@@ -87,7 +88,15 @@ export const logoRoutes = new Hono<AppEnv>()
     const ws = await db.query.workspace.findFirst({ where: eq(workspace.id, actor.workspaceId) });
     // Point the workspace at the new logo first, then remove the old object: a failure in between
     // leaves an unused object, never a workspace pointing at a missing logo.
-    await db.update(workspace).set({ logoFileId: key }).where(eq(workspace.id, actor.workspaceId));
+    await db.batch([
+      db.update(workspace).set({ logoFileId: key }).where(eq(workspace.id, actor.workspaceId)),
+      auditInsert(db, {
+        action: 'workspace.logo_changed',
+        actorId: actor.userId,
+        targetId: actor.workspaceId,
+        meta: { type: mime, size: bytes.byteLength },
+      }),
+    ]);
     if (ws?.logoFileId) await c.env.FILES.delete(ws.logoFileId);
     return c.json({ logoUrl: `/api/branding/logo?v=${encodeURIComponent(key)}` });
   })
@@ -95,7 +104,15 @@ export const logoRoutes = new Hono<AppEnv>()
     const { db, actor } = c.var;
     if (!isAdmin(actor)) throw forbidden('Only owners and admins can change the logo.');
     const ws = await db.query.workspace.findFirst({ where: eq(workspace.id, actor.workspaceId) });
-    await db.update(workspace).set({ logoFileId: null }).where(eq(workspace.id, actor.workspaceId));
-    if (ws?.logoFileId) await c.env.FILES.delete(ws.logoFileId);
+    if (!ws?.logoFileId) return c.body(null, 204); // nothing to remove, nothing to record
+    await db.batch([
+      db.update(workspace).set({ logoFileId: null }).where(eq(workspace.id, actor.workspaceId)),
+      auditInsert(db, {
+        action: 'workspace.logo_removed',
+        actorId: actor.userId,
+        targetId: actor.workspaceId,
+      }),
+    ]);
+    await c.env.FILES.delete(ws.logoFileId);
     return c.body(null, 204);
   });

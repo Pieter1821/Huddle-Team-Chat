@@ -6,6 +6,7 @@ import { randomToken, sha256Hex } from '../../lib/crypto';
 import { AppError, badRequest, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody } from '../../lib/validate';
+import { auditInsert } from '../audit/audit';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
 import { postableConversation, roomFor, unwrap } from '../conversations/service';
@@ -28,13 +29,22 @@ export const conversationWebhookRoutes = new Hono<AppEnv>()
     const token = randomToken();
     const { name } = c.req.valid('json');
     // Only a hash of the token is stored: a database leak does not leak working webhook URLs.
-    await db.insert(webhook).values({
-      id,
-      conversationId: conv.id,
-      name,
-      tokenHash: await sha256Hex(token),
-      createdBy: actor.userId,
-    });
+    // The webhook and its audit entry are written together or not at all.
+    await db.batch([
+      db.insert(webhook).values({
+        id,
+        conversationId: conv.id,
+        name,
+        tokenHash: await sha256Hex(token),
+        createdBy: actor.userId,
+      }),
+      auditInsert(db, {
+        action: 'webhook.created',
+        actorId: actor.userId,
+        targetId: id,
+        meta: { name, channel: conv.name },
+      }),
+    ]);
     return c.json(
       { webhook: { id, name, conversationId: conv.id }, url: `${config.appUrl}/api/hooks/${id}/${token}` },
       201,
@@ -62,12 +72,23 @@ export const conversationWebhookRoutes = new Hono<AppEnv>()
 export const webhookRoutes = new Hono<AppEnv>().use('/*', requireActor).delete('/:id', async (c) => {
   const { db, actor } = c.var;
   if (!isAdmin(actor)) throw forbidden('Only owners and admins can revoke webhooks.');
-  const updated = await db
-    .update(webhook)
-    .set({ revokedAt: new Date() })
-    .where(and(eq(webhook.id, c.req.param('id')), isNull(webhook.revokedAt)))
-    .returning({ id: webhook.id });
-  if (!updated.length) throw notFound('That webhook');
+  const hook = await db.query.webhook.findFirst({
+    where: and(eq(webhook.id, c.req.param('id')), isNull(webhook.revokedAt)),
+    columns: { id: true, name: true },
+  });
+  if (!hook) throw notFound('That webhook');
+  await db.batch([
+    db
+      .update(webhook)
+      .set({ revokedAt: new Date() })
+      .where(and(eq(webhook.id, hook.id), isNull(webhook.revokedAt))),
+    auditInsert(db, {
+      action: 'webhook.revoked',
+      actorId: actor.userId,
+      targetId: hook.id,
+      meta: { name: hook.name },
+    }),
+  ]);
   return c.body(null, 204);
 });
 

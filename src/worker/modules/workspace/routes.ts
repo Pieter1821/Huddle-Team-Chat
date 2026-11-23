@@ -6,6 +6,7 @@ import { forbidden } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
 import { isAdmin } from '../access/access';
+import { auditInsert } from '../audit/audit';
 import { accentSchema } from '../branding/routes';
 
 export const displayName = z.string().trim().min(1).max(80);
@@ -49,22 +50,41 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
     const { actor, db } = c.var;
     if (!isAdmin(actor)) throw forbidden('Only owners and admins can change workspace settings.');
     const body = c.req.valid('json');
-    const [updated] = await db
-      .update(workspace)
-      .set({
-        ...(body.name !== undefined ? { name: body.name } : {}),
-        ...(body.allowMemberGuestInvites !== undefined
-          ? { allowMemberGuestInvites: body.allowMemberGuestInvites }
-          : {}),
-        ...(body.accent !== undefined ? { accent: body.accent } : {}),
-      })
-      .where(eq(workspace.id, actor.workspaceId))
-      .returning({
+    const changes = {
+      ...(body.name !== undefined ? { name: body.name } : {}),
+      ...(body.allowMemberGuestInvites !== undefined
+        ? { allowMemberGuestInvites: body.allowMemberGuestInvites }
+        : {}),
+      ...(body.accent !== undefined ? { accent: body.accent } : {}),
+    };
+    const before = await db.query.workspace.findFirst({
+      where: eq(workspace.id, actor.workspaceId),
+      columns: { name: true, accent: true, allowMemberGuestInvites: true },
+    });
+    // What changed, from what to what, recorded together with the change itself.
+    const changed = Object.fromEntries(
+      Object.entries(changes)
+        .filter(([key, to]) => before?.[key as keyof typeof changes] !== to)
+        .map(([key, to]) => [key, { from: before?.[key as keyof typeof changes] ?? null, to }]),
+    );
+    if (!Object.keys(changed).length) {
+      // Nothing actually changed: no write, no log entry.
+      return c.json({ workspace: { id: actor.workspaceId, ...before } });
+    }
+    const [rows] = await db.batch([
+      db.update(workspace).set(changes).where(eq(workspace.id, actor.workspaceId)).returning({
         id: workspace.id,
         name: workspace.name,
         allowMemberGuestInvites: workspace.allowMemberGuestInvites,
         accent: workspace.accent,
-      });
-    return c.json({ workspace: updated });
+      }),
+      auditInsert(db, {
+        action: 'workspace.updated',
+        actorId: actor.userId,
+        targetId: actor.workspaceId,
+        meta: { changes: changed },
+      }),
+    ]);
+    return c.json({ workspace: rows[0] });
   },
 );

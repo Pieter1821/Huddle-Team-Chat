@@ -23,6 +23,11 @@ const ACTIONS: Record<string, string> = {
   'auth.sign_up_blocked': 'Sign-up blocked (not invited)',
   'auth.session_blocked': 'Blocked a deactivated account',
   'workspace.created': 'Set up the workspace',
+  'workspace.updated': 'Changed workspace settings',
+  'workspace.logo_changed': 'Uploaded a new logo',
+  'workspace.logo_removed': 'Removed the logo',
+  'webhook.created': 'Created a webhook',
+  'webhook.revoked': 'Revoked a webhook',
   'invitation.created': 'Invited someone',
   'invitation.accepted': 'Accepted an invitation',
   'invitation.revoked': 'Withdrew an invitation',
@@ -111,11 +116,32 @@ export function AuditTab() {
 function describe(e: Entry): string {
   const m = e.meta ?? {};
   const parts: string[] = [];
-  for (const key of ['email', 'role', 'from', 'to', 'name', 'method'] as const) {
+  for (const key of ['email', 'role', 'from', 'to', 'name', 'channel', 'method'] as const) {
     const v = m[key];
-    if (typeof v === 'string' || typeof v === 'number') parts.push(`${key}: ${v}`);
+    if (typeof v === 'string' || typeof v === 'number')
+      parts.push(key === 'channel' ? `#${v}` : `${key}: ${v}`);
+  }
+  // Workspace settings: "name: Acme → Acme Studio".
+  if (m.changes && typeof m.changes === 'object') {
+    for (const [field, change] of Object.entries(
+      m.changes as Record<string, { from: unknown; to: unknown }>,
+    )) {
+      parts.push(`${FIELD[field] ?? field}: ${show(change.from)} → ${show(change.to)}`);
+    }
   }
   if (m.includeDms === true) parts.push('including direct messages');
   if (e.ipAddress) parts.push(`IP ${e.ipAddress}`);
   return parts.join(' · ');
 }
+
+const FIELD: Record<string, string> = {
+  name: 'name',
+  accent: 'colour',
+  allowMemberGuestInvites: 'members invite guests',
+};
+const show = (v: unknown): string => {
+  if (v === null || v === undefined) return 'default';
+  if (typeof v === 'boolean') return v ? 'on' : 'off';
+  if (typeof v === 'string' || typeof v === 'number') return String(v);
+  return JSON.stringify(v);
+};

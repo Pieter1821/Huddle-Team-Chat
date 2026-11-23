@@ -199,3 +199,61 @@ describe('guests in a conversation', () => {
     expect(details.json.members.map((m: any) => m.role).sort()).toEqual(['guest', 'owner']);
   });
 });
+
+describe('admin changes in the security log', () => {
+  const entries = async () =>
+    (
+      await env.DB.prepare(
+        'SELECT action, actor_id AS actorId, target_id AS targetId, meta FROM audit_log ORDER BY id',
+      ).all<{
+        action: string;
+        actorId: string | null;
+        targetId: string | null;
+        meta: string | null;
+      }>()
+    ).results.map((r) => ({ ...r, meta: r.meta ? (JSON.parse(r.meta) as Record<string, unknown>) : null }));
+
+  it('records workspace setting changes with what they changed from and to, and skips no-ops', async () => {
+    const { cookie } = await setupWorkspace();
+    const me = (await api('/api/me', { cookie })).json;
+    await api('/api/workspace', { method: 'PATCH', body: { name: 'Renamed', accent: '#ffb020' }, cookie });
+    await api('/api/workspace', { method: 'PATCH', body: { name: 'Renamed' }, cookie }); // no change
+    const updates = (await entries()).filter((e) => e.action === 'workspace.updated');
+    expect(updates).toHaveLength(1);
+    expect(updates[0]).toMatchObject({
+      actorId: me.user.id,
+      meta: { changes: { name: { to: 'Renamed' }, accent: { from: null, to: '#ffb020' } } },
+    });
+  });
+
+  it('records logo uploads and removals, not removing a logo that isn’t there', async () => {
+    const { cookie } = await setupWorkspace();
+    await putLogo(cookie, PNG);
+    await api('/api/workspace/logo', { method: 'DELETE', cookie });
+    await api('/api/workspace/logo', { method: 'DELETE', cookie });
+    const actions = (await entries()).map((e) => e.action).filter((a) => a.startsWith('workspace.logo'));
+    expect(actions).toEqual(['workspace.logo_changed', 'workspace.logo_removed']);
+  });
+
+  it('records webhooks being created and revoked, never their secret URL', async () => {
+    const owner = await setupWorkspace();
+    const ch = (
+      await api('/api/conversations', { body: { name: 'alerts', kind: 'public' }, cookie: owner.cookie })
+    ).json.conversation.id as string;
+    const created = await api(`/api/conversations/${ch}/webhooks`, {
+      body: { name: 'Uptime monitor' },
+      cookie: owner.cookie,
+    });
+    const id = created.json.webhook.id as string;
+    expect((await api(`/api/webhooks/${id}`, { method: 'DELETE', cookie: owner.cookie })).status).toBe(204);
+    expect((await api(`/api/webhooks/${id}`, { method: 'DELETE', cookie: owner.cookie })).status).toBe(404);
+
+    const hooks = (await entries()).filter((e) => e.action.startsWith('webhook.'));
+    expect(hooks.map((e) => [e.action, e.targetId, e.meta?.name])).toEqual([
+      ['webhook.created', id, 'Uptime monitor'],
+      ['webhook.revoked', id, 'Uptime monitor'],
+    ]);
+    const token = (created.json.url as string).split('/').at(-1)!;
+    expect(JSON.stringify(await entries())).not.toContain(token);
+  });
+});
