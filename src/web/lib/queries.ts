@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ApiError } from './api';
 import { forgetPushOnSignOut } from './pwa';
@@ -68,7 +68,7 @@ export function useMembers() {
     queryFn: async () => (await api<{ members: Member[] }>('/members')).members,
     staleTime: 5 * 60_000,
   });
-  const byId = new Map((query.data ?? []).map((m) => [m.userId, m]));
+  const byId = useMemo(() => new Map((query.data ?? []).map((m) => [m.userId, m])), [query.data]);
   return { ...query, byId };
 }
 

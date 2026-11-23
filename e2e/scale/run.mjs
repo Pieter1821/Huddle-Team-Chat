@@ -58,6 +58,13 @@ async function waitForServer() {
   throw new Error('server did not start');
 }
 
+class LimitError extends Error {
+  constructor(retryAfter) {
+    super('over the send limit');
+    this.retryAfter = retryAfter;
+  }
+}
+
 /** A person with their own cookie jar and (so sign-in limits behave as for real people) own address. */
 class Person {
   constructor(email, ip) {
@@ -90,6 +97,7 @@ class Person {
       this.cookie = [...jar].map(([k, v]) => `${k}=${v}`).join('; ');
     }
     const text = await res.text();
+    if (res.status === 429) throw new LimitError(Number(res.headers.get('retry-after') ?? 1));
     if (!res.ok)
       throw new Error(
         `${method ?? (json === undefined ? 'GET' : 'POST')} ${path}: ${res.status} ${text.slice(0, 200)}`,
@@ -187,6 +195,7 @@ const byChannel = new Map();
 for (const c of plan) byChannel.set(c, (byChannel.get(c) ?? 0) + 1);
 const recent = new Map(); // channel → recent top-level message ids (for thread replies)
 let sent = 0;
+let limited = 0;
 let n = 0;
 const postTimes = [];
 const started = now();
@@ -200,13 +209,21 @@ await Promise.all(
       const parents = recent.get(channel) ?? [];
       const parentId = parents.length && Math.random() < 0.06 ? pick(parents) : undefined;
       const t = now();
-      const { message } = await author.call(`/conversations/${channel}/messages`, {
-        json: {
-          body: `${mention}${words}`,
-          clientMsgId: `scale-${String(n++).padStart(6, '0')}`,
-          ...(parentId ? { parentId } : {}),
-        },
-      });
+      const clientMsgId = `scale-${String(n++).padStart(6, '0')}`;
+      let message;
+      for (;;) {
+        try {
+          ({ message } = await author.call(`/conversations/${channel}/messages`, {
+            json: { body: `${mention}${words}`, clientMsgId, ...(parentId ? { parentId } : {}) },
+          }));
+          break;
+        } catch (err) {
+          // Over the send limit: wait as told and send the same message again.
+          if (!(err instanceof LimitError)) throw err;
+          limited++;
+          await sleep(err.retryAfter * 1000);
+        }
+      }
       postTimes.push(now() - t);
       if (!parentId) recent.set(channel, [...parents.slice(-30), message.id]);
       if (++sent % 2000 === 0) {
@@ -219,6 +236,7 @@ await Promise.all(
 report.results.sendWhileFilling = {
   ...stats(postTimes),
   perSecond: Math.round(sent / ((now() - started) / 1000)),
+  refusedBySendLimit: limited,
 };
 
 /* ------------------------------------------------------------------ measure the API */

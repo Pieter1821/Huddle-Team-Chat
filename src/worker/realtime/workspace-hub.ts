@@ -7,6 +7,29 @@ export type HubMessage =
   | { type: 'activity'; conversationId: string; seq: number; authorId: string | null; mentioned: boolean }
   | { type: 'conversation.changed'; conversationId: string };
 
+/** Messages one person may send: a burst of this many, then one more per second (60 a minute). */
+export const SEND_BURST = 60;
+const SEND_REFILL_PER_MS = 1 / 1000;
+
+export type SendBucket = { tokens: number; at: number };
+
+/**
+ * One step of a token bucket: whether a send is allowed now, the bucket after it, and if not, how
+ * many seconds until it would be. Pure, so the rule is tested on its own.
+ */
+export function takeSend(bucket: SendBucket | undefined, now: number) {
+  const tokens = Math.min(
+    SEND_BURST,
+    (bucket?.tokens ?? SEND_BURST) + (now - (bucket?.at ?? now)) * SEND_REFILL_PER_MS,
+  );
+  if (tokens >= 1) return { allowed: true as const, bucket: { tokens: tokens - 1, at: now } };
+  return {
+    allowed: false as const,
+    bucket: { tokens, at: now },
+    retryAfter: Math.ceil((1 - tokens) / SEND_REFILL_PER_MS / 1000),
+  };
+}
+
 /**
  * One per workspace. Holds a socket per open tab and answers two questions without anyone polling:
  * who is online, and which of my other conversations just got something new (for sidebar badges).
@@ -94,6 +117,27 @@ export class WorkspaceHub extends DurableObject<Env> {
     for (const userId of userIds) {
       this.send(this.ctx.getWebSockets(userId), { type: 'conversation.changed', conversationId });
     }
+  }
+
+  // Kept in memory only: counting in the database would double the writes of every message, the
+  // very budget this protects. If the object restarts, everyone simply starts with a full bucket.
+  private sendBuckets = new Map<string, SendBucket>();
+
+  /**
+   * Whether this person may send a message now. Stops a runaway script or a misused account from
+   * spending the whole workspace's daily database allowance; people typing never come near it.
+   */
+  allowSend(userId: string): { allowed: true } | { allowed: false; retryAfter: number } {
+    const now = Date.now();
+    const result = takeSend(this.sendBuckets.get(userId), now);
+    this.sendBuckets.set(userId, result.bucket);
+    if (this.sendBuckets.size > 5000) {
+      // Forget full buckets (people who haven't sent for a minute) so the map can't grow without end.
+      for (const [id, b] of this.sendBuckets) {
+        if (takeSend(b, now).bucket.tokens >= SEND_BURST - 1) this.sendBuckets.delete(id);
+      }
+    }
+    return result.allowed ? { allowed: true } : { allowed: false, retryAfter: result.retryAfter };
   }
 
   /** Ends every live connection of a user (deactivation). */

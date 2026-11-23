@@ -9,6 +9,7 @@ import {
   user,
   workspaceMember,
 } from '../../db/schema';
+import { hubFor } from '../../realtime/workspace-hub';
 import { AppError, badRequest, conflict, forbidden, notFound } from '../../lib/errors';
 import { newId } from '../../lib/id';
 import { jsonBody, queryParams } from '../../lib/validate';
@@ -440,7 +441,20 @@ export const conversationRoutes = new Hono<AppEnv>()
       const { db, actor } = c.var;
       const conv = await postableConversation(db, actor, c.req.param('id'));
       // Reading a public channel is open to members of the workspace; posting needs membership.
-      if (!(await isMember(db, conv.id, actor.userId))) throw forbidden('Join the channel to post.');
+      // The send limit is checked at the same time, so it adds no waiting of its own.
+      const [member, limit] = await Promise.all([
+        isMember(db, conv.id, actor.userId),
+        hubFor(c.env).allowSend(actor.userId),
+      ]);
+      if (!member) throw forbidden('Join the channel to post.');
+      if (!limit.allowed) {
+        c.header('Retry-After', String(limit.retryAfter));
+        throw new AppError(
+          429,
+          'rate_limited',
+          'You’re sending messages very quickly. Wait a moment, then send again.',
+        );
+      }
       const body = c.req.valid('json');
       const result = unwrap(
         await roomFor(c.env, conv.id).post({

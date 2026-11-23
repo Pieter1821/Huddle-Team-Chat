@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { memo, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AlertDialog } from 'radix-ui';
 import { FileText, MessageSquare, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,11 @@ const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-di
 const full = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
 
 /** One message: author line (unless grouped with the one before), text, reactions and actions. */
-export function MessageItem({
+/**
+ * Memoised: a long history re-renders only the messages that changed, not all of them, when one
+ * message arrives or changes. Every prop passed in must therefore be stable between renders.
+ */
+export const MessageItem = memo(function MessageItem({
   message: m,
   authorName,
   isApp,
@@ -30,7 +34,7 @@ export function MessageItem({
   myId,
   canDelete,
   editing,
-  onEditingChange,
+  setEditingId,
   nameOf,
   actions,
 }: {
@@ -41,10 +45,11 @@ export function MessageItem({
   myId: string;
   canDelete: boolean;
   editing: boolean;
-  onEditingChange: (editing: boolean) => void;
+  setEditingId: (id: string | null) => void;
   nameOf: (userId: string) => string;
   actions: MessageActions;
 }) {
+  const onEditingChange = (on: boolean) => setEditingId(on ? m.id : null);
   const mine = m.authorId === myId;
   const created = new Date(m.createdAt);
 
@@ -196,7 +201,7 @@ export function MessageItem({
       )}
     </article>
   );
-}
+});
 
 /** Hover (or keyboard focus) actions in the top-right corner of a message. */
 function Toolbar({

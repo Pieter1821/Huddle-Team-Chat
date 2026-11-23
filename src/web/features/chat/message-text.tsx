@@ -1,9 +1,9 @@
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, type ReactNode, memo } from 'react';
 import { cn } from '@/lib/utils';
 import { parseMessage, type Inline } from './format';
 
 /** Renders message text as React elements (never HTML), with mentions shown by current name. */
-export function MessageText({
+export const MessageText = memo(function MessageText({
   body,
   nameOf,
   myId,
@@ -38,7 +38,7 @@ export function MessageText({
       })}
     </div>
   );
-}
+});
 
 function renderInline(nodes: Inline[], nameOf: (id: string) => string, myId: string): ReactNode {
   return nodes.map((n, i) => {

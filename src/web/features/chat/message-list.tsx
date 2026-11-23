@@ -134,8 +134,8 @@ export function MessageList({
         myId={myId}
         canDelete={m.authorId === myId || isAdmin}
         editing={editingId === m.id}
-        onEditingChange={(on) => setEditingId(on ? m.id : null)}
-        nameOf={(id) => nameOf(id)}
+        setEditingId={setEditingId}
+        nameOf={nameOf}
         actions={actions}
       />,
     );

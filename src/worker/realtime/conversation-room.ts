@@ -153,6 +153,7 @@ export class ConversationRoom extends DurableObject<Env> {
   private async commit(
     conversationId: string,
     build: (seq: number, at: Date) => { event: NewEvent; changes: BatchItem[] },
+    memberIds?: string[],
   ): Promise<ConversationEvent> {
     const seq = (await this.currentSeq(conversationId)) + 1;
     const at = new Date();
@@ -172,30 +173,43 @@ export class ConversationRoom extends DurableObject<Env> {
       throw err;
     }
     this.lastSeq = seq;
-    await this.publish(full);
+    await this.publish(full, memberIds ? { memberIds } : {});
     return full;
   }
 
-  private async publish(event: ConversationEvent): Promise<void> {
+  /**
+   * Broadcasts at once (so order is kept), then does the follow-up work (sidebar badge pings and
+   * marking the event published) without making the sender wait for it. If the object stops before
+   * the mark is written, the hourly outbox check sends the event again, and clients ignore repeats.
+   * Recovery passes `wait` so it finishes each event before the next.
+   */
+  private async publish(event: ConversationEvent, opts: { memberIds?: string[]; wait?: boolean } = {}) {
     this.broadcast(JSON.stringify(event));
-    await this.notifyHub(event);
-    await this.db
-      .update(conversationEvent)
-      .set({ publishedAt: new Date() })
-      .where(
-        and(eq(conversationEvent.conversationId, event.conversationId), eq(conversationEvent.seq, event.seq)),
-      );
+    const after = (async () => {
+      await this.notifyHub(event, opts.memberIds);
+      await this.db
+        .update(conversationEvent)
+        .set({ publishedAt: new Date() })
+        .where(
+          and(
+            eq(conversationEvent.conversationId, event.conversationId),
+            eq(conversationEvent.seq, event.seq),
+          ),
+        );
+    })().catch((err: unknown) => console.error('after-publish failed', err));
+    if (opts.wait) await after;
+    else this.ctx.waitUntil(after);
   }
 
   /**
    * Lets members' other tabs know (sidebar badges, membership changes). Best effort: the event is
    * already saved and broadcast, and clients refresh their sidebar whenever they reconnect.
    */
-  private async notifyHub(event: ConversationEvent): Promise<void> {
+  private async notifyHub(event: ConversationEvent, knownMemberIds?: string[]): Promise<void> {
     try {
       const hub = hubFor(this.env);
       if (event.type === 'message.created') {
-        const memberIds = await this.memberIds(event.conversationId);
+        const memberIds = knownMemberIds ?? (await this.memberIds(event.conversationId));
         const { mentioned } = this.resolveMentions(
           event.data.message.body,
           memberIds,
@@ -278,7 +292,7 @@ export class ConversationRoom extends DurableObject<Env> {
         }
       }
     }
-    return { targets, notify };
+    return { targets, notify, memberIds };
   }
 
   private mentionAndNotificationRows(
@@ -334,7 +348,7 @@ export class ConversationRoom extends DurableObject<Env> {
           and(eq(conversationEvent.conversationId, conversationId), isNull(conversationEvent.publishedAt)),
         )
         .orderBy(asc(conversationEvent.seq));
-      for (const row of pending) await this.publish(row.payload as ConversationEvent);
+      for (const row of pending) await this.publish(row.payload as ConversationEvent, { wait: true });
       return pending.length;
     });
   }
@@ -374,7 +388,7 @@ export class ConversationRoom extends DurableObject<Env> {
 
         const id = newId();
         const files = await this.claimableFiles(input);
-        const { targets, notify } = await this.notificationsFor({
+        const { targets, notify, memberIds } = await this.notificationsFor({
           conversationId: input.conversationId,
           authorId: input.authorId,
           body: input.body,
@@ -382,57 +396,61 @@ export class ConversationRoom extends DurableObject<Env> {
         });
 
         let created!: MessageDto;
-        await this.commit(input.conversationId, (seq, at) => {
-          const row = {
-            id,
-            conversationId: input.conversationId,
-            seq,
-            authorId: input.authorId,
-            webhookId: input.webhookId ?? null,
-            clientMsgId: input.clientMsgId,
-            parentId,
-            body: input.body,
-            alsoInChannel: Boolean(parentId && input.alsoInChannel),
-            replyCount: 0,
-            lastReplyAt: null,
-            editedAt: null,
-            deletedAt: null,
-            createdAt: at,
-          };
-          created = {
-            ...toMessageDto({ ...row, rowId: 0 }),
-            files: files.map(toFileDto),
-            webhookName: input.webhookName ?? null,
-          };
-          return {
-            event: { type: 'message.created', data: { message: created } },
-            changes: [
-              this.db.insert(message).values(row),
-              ...(files.length
-                ? [
-                    this.db
-                      .update(file)
-                      .set({ messageId: id })
-                      .where(
-                        inArray(
-                          file.id,
-                          files.map((f) => f.id),
+        await this.commit(
+          input.conversationId,
+          (seq, at) => {
+            const row = {
+              id,
+              conversationId: input.conversationId,
+              seq,
+              authorId: input.authorId,
+              webhookId: input.webhookId ?? null,
+              clientMsgId: input.clientMsgId,
+              parentId,
+              body: input.body,
+              alsoInChannel: Boolean(parentId && input.alsoInChannel),
+              replyCount: 0,
+              lastReplyAt: null,
+              editedAt: null,
+              deletedAt: null,
+              createdAt: at,
+            };
+            created = {
+              ...toMessageDto({ ...row, rowId: 0 }),
+              files: files.map(toFileDto),
+              webhookName: input.webhookName ?? null,
+            };
+            return {
+              event: { type: 'message.created', data: { message: created } },
+              changes: [
+                this.db.insert(message).values(row),
+                ...(files.length
+                  ? [
+                      this.db
+                        .update(file)
+                        .set({ messageId: id })
+                        .where(
+                          inArray(
+                            file.id,
+                            files.map((f) => f.id),
+                          ),
                         ),
-                      ),
-                  ]
-                : []),
-              ...this.mentionAndNotificationRows(id, targets, notify, at),
-              ...(parentId
-                ? [
-                    this.db
-                      .update(message)
-                      .set({ replyCount: sql`${message.replyCount} + 1`, lastReplyAt: at })
-                      .where(eq(message.id, parentId)),
-                  ]
-                : []),
-            ],
-          };
-        });
+                    ]
+                  : []),
+                ...this.mentionAndNotificationRows(id, targets, notify, at),
+                ...(parentId
+                  ? [
+                      this.db
+                        .update(message)
+                        .set({ replyCount: sql`${message.replyCount} + 1`, lastReplyAt: at })
+                        .where(eq(message.id, parentId)),
+                    ]
+                  : []),
+              ],
+            };
+          },
+          memberIds,
+        );
         if (notify.size) this.queuePush(id, [...notify.keys()]);
         return { message: created, created: true };
       }),

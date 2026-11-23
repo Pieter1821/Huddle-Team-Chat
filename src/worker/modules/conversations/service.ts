@@ -93,14 +93,20 @@ export type SidebarRow = {
  * Every open conversation the user belongs to, with unread and mention counts computed in SQL.
  * Unread counts only top-level messages (and replies also sent to the channel) from other people.
  */
+/** Unread counts stop here; nothing shows more than "99+". */
+export const UNREAD_CAP = 100;
+
 export async function sidebarFor(db: Db, userId: string): Promise<SidebarRow[]> {
   return db.all<SidebarRow>(sql`
     SELECT c.id, c.kind, c.name, c.topic, c.last_seq AS lastSeq,
            cm.last_read_seq AS lastReadSeq, cm.notify_level AS notifyLevel,
-           (SELECT count(*) FROM message m
+           -- Counted only up to 100 ("99+"): someone who never reads a busy channel would otherwise
+           -- make every sidebar load read its whole backlog, against the free plan's daily reads.
+           (SELECT count(*) FROM (SELECT 1 FROM message m
              WHERE m.conversation_id = c.id AND m.seq > cm.last_read_seq AND m.deleted_at IS NULL
                AND (m.parent_id IS NULL OR m.also_in_channel = 1)
-               AND (m.author_id IS NULL OR m.author_id <> ${userId})) AS unread,
+               AND (m.author_id IS NULL OR m.author_id <> ${userId})
+             LIMIT ${UNREAD_CAP})) AS unread,
            (SELECT count(*) FROM message_mention mm JOIN message m ON m.id = mm.message_id
              WHERE m.conversation_id = c.id AND m.seq > cm.last_read_seq AND m.deleted_at IS NULL
                AND mm.target IN (${userId}, 'channel', 'here')
