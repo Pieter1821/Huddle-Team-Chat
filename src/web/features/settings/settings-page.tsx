@@ -1,10 +1,20 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, Page, SaveNote, Select } from '@/components/ui/page';
 import { ApiError, api } from '@/lib/api';
+import {
+  disablePush,
+  enablePush,
+  install,
+  isInstalled,
+  pushSupport,
+  refreshPush,
+  testPush,
+  useCanInstall,
+} from '@/lib/pwa';
 import { useMe } from '@/lib/queries';
 
 type Preferences = {
@@ -17,13 +27,14 @@ type Note = { ok: boolean; text: string } | null;
 
 const errorText = (err: unknown) => (err instanceof ApiError ? err.message : 'That didn’t save. Try again.');
 
-/** Your own settings: the name people see, and when Huddle emails you. */
+/** Your own settings: the name people see, this device, and when Huddle emails you. */
 export function SettingsPage() {
   const { data: me } = useMe();
   if (!me) return null;
   return (
     <Page title="Your settings">
       <ProfileCard name={me.user.name} email={me.user.email} />
+      <DeviceCard />
       <NotificationsCard />
     </Page>
   );
@@ -80,6 +91,121 @@ function ProfileCard({ name: current, email }: { name: string; email: string }) 
           <SaveNote state={note} />
         </div>
       </form>
+    </Card>
+  );
+}
+
+/**
+ * Installing Huddle as an app and getting notifications on this device. Push is per browser: each
+ * phone or computer is turned on separately, and signing out turns it off there.
+ */
+function DeviceCard() {
+  const support = pushSupport();
+  const canInstall = useCanInstall();
+  const [on, setOn] = useState<boolean | null>(null);
+  const [blocked, setBlocked] = useState(
+    () => support === 'supported' && Notification.permission === 'denied',
+  );
+  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState<Note>(null);
+
+  useEffect(() => {
+    if (support !== 'supported') return;
+    let live = true;
+    // Re-saves an existing subscription, in case the server dropped it (e.g. after signing out).
+    refreshPush()
+      .then((sub) => live && setOn(Boolean(sub)))
+      .catch(() => live && setOn(false));
+    return () => {
+      live = false;
+    };
+  }, [support]);
+
+  async function toggle(next: boolean) {
+    setBusy(true);
+    setNote(null);
+    try {
+      if (next) {
+        const answer = await enablePush();
+        setBlocked(answer === 'denied');
+        setOn(answer === 'granted');
+      } else {
+        await disablePush();
+        setOn(false);
+      }
+    } catch (err) {
+      setNote({
+        ok: false,
+        text: err instanceof ApiError ? err.message : 'Notifications couldn’t be turned on. Try again.',
+      });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function test() {
+    setNote(null);
+    try {
+      await testPush();
+      setNote({ ok: true, text: 'Sent. It should appear in a moment.' });
+    } catch (err) {
+      setNote({ ok: false, text: errorText(err) });
+      if (err instanceof ApiError && err.code === 'push_gone') setOn(false);
+    }
+  }
+
+  return (
+    <Card
+      title="This device"
+      description="Get a notification here when someone mentions you, sends you a direct message or replies in a thread you’re in."
+    >
+      <div className="space-y-4">
+        {support === 'unsupported' && (
+          <p className="text-sm text-muted">This browser can’t show notifications from Huddle.</p>
+        )}
+        {support === 'install-first' && (
+          <p className="text-sm text-muted">
+            On iPhone and iPad, add Huddle to your Home Screen first: tap Share, then Add to Home Screen. Open
+            Huddle from there and turn notifications on.
+          </p>
+        )}
+        {support === 'supported' && (
+          <>
+            <label className="flex cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                role="switch"
+                checked={Boolean(on)}
+                disabled={busy || on === null || blocked}
+                onChange={(e) => void toggle(e.target.checked)}
+                className="relative mt-0.5 h-6 w-10 shrink-0 cursor-pointer appearance-none rounded-full bg-bronze transition-colors duration-150 before:absolute before:top-0.5 before:left-0.5 before:size-5 before:rounded-full before:bg-ink before:transition-transform before:duration-150 checked:bg-action checked:before:translate-x-4 checked:before:bg-action-ink focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action disabled:cursor-not-allowed disabled:opacity-50 motion-reduce:transition-none motion-reduce:before:transition-none"
+              />
+              <span>
+                <span className="block text-[15px]">Notifications on this device</span>
+                <span className="block text-sm text-meta">
+                  {blocked
+                    ? 'Notifications are blocked for Huddle in this browser. Allow them in the site settings (the icon next to the address), then reload.'
+                    : 'Follows each conversation’s notification setting and your pause below.'}
+                </span>
+              </span>
+            </label>
+            {on && (
+              <Button size="sm" variant="ghost" onClick={() => void test()}>
+                Send a test notification
+              </Button>
+            )}
+          </>
+        )}
+        {canInstall && !isInstalled() && (
+          <div className="flex flex-wrap items-center gap-3 border-t border-rule pt-4">
+            <Button size="sm" onClick={() => void install()}>
+              Install Huddle
+            </Button>
+            <p className="text-sm text-meta">Opens in its own window, like your other apps.</p>
+          </div>
+        )}
+        <SaveNote state={note} />
+      </div>
     </Card>
   );
 }
@@ -194,6 +320,7 @@ function NotificationsCard() {
         </div>
         <div className="space-y-2">
           <p className="text-sm font-medium">Pause notifications</p>
+          <p className="text-xs text-meta">Pauses email summaries and notifications on your devices.</p>
           {paused ? (
             <div className="flex flex-wrap items-center gap-3">
               <p className="text-sm text-muted">Paused until {until.format(new Date(p.pausedUntil!))}.</p>

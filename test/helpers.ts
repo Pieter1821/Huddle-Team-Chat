@@ -123,6 +123,8 @@ export async function addMember(
 /** Empties every table (children first, because D1 enforces foreign keys). */
 export async function resetDb() {
   const tables = [
+    'push_subscription',
+    'push_key',
     'audit_log',
     'daily_counter',
     'import_conversation_map',

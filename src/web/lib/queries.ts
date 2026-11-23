@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ApiError } from './api';
+import { forgetPushOnSignOut } from './pwa';
 import type { Branding, Me, Role, SidebarConversation } from './types';
 
 /** The team's look, readable before sign-in. Its accent drives the theme's action colour. */
@@ -43,7 +44,10 @@ export function useConversations(enabled = true) {
 export function useSignOut() {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: () => api('/auth/sign-out', { json: {} }),
+    mutationFn: async () => {
+      await forgetPushOnSignOut();
+      return api('/auth/sign-out', { json: {} });
+    },
     onSettled: () => client.clear(),
   });
 }

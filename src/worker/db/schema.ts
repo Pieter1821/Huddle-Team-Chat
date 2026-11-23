@@ -509,3 +509,35 @@ export const dailyCounter = sqliteTable(
   },
   (t) => [primaryKey({ columns: [t.day, t.kind] })],
 );
+
+/* ---------------------------------------------------------------------------------------------
+ * Push notifications. Each browser that turns them on gets one subscription; it belongs to the
+ * session that created it, so signing out (or a session expiring) stops pushes to that device.
+ * ------------------------------------------------------------------------------------------- */
+
+export const pushSubscription = sqliteTable(
+  'push_subscription',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id, { onDelete: 'cascade' }),
+    sessionId: text('session_id')
+      .notNull()
+      .references(() => session.id, { onDelete: 'cascade' }),
+    endpoint: text('endpoint').notNull().unique(),
+    p256dh: text('p256dh').notNull(),
+    auth: text('auth').notNull(),
+    createdAt: createdAt(),
+  },
+  (t) => [index('push_subscription_user').on(t.userId), index('push_subscription_session').on(t.sessionId)],
+);
+
+// The server's own signing key for push (VAPID), made on first use. The private half is stored
+// encrypted with a key derived from the server secret, so a copy of the database alone can't use it.
+export const pushKey = sqliteTable('push_key', {
+  id: text('id').primaryKey(), // always 'vapid'
+  publicKey: text('public_key').notNull(), // base64url, uncompressed P-256 point
+  privateKey: text('private_key').notNull(), // base64url(iv || AES-GCM ciphertext of the JWK)
+  createdAt: createdAt(),
+});
