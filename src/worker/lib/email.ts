@@ -1,7 +1,6 @@
 import { sql } from 'drizzle-orm';
 import type { Config } from '../config';
 import type { Db } from '../db/client';
-import { getAccount, sendWithGmail } from '../modules/email/gmail';
 import { sendWithAppPassword } from '../modules/email/smtp';
 import { AppError } from './errors';
 
@@ -30,11 +29,9 @@ export function useEmailTransport(next: EmailTransport | null): void {
   transport = next;
 }
 
-/** Whether emails really leave the Worker: Gmail is set up and working (false locally without it). */
-export async function emailDeliveryConfigured(db: Db, config: Config): Promise<boolean> {
-  if (transport || config.gmailAppPassword) return true;
-  const account = await getAccount(db);
-  return Boolean(account && !account.needsReconnectAt);
+/** Whether emails really leave the Worker: a Gmail app password is set (false locally without it). */
+export async function emailDeliveryConfigured(config: Config): Promise<boolean> {
+  return Promise.resolve(Boolean(transport || config.gmailAppPassword));
 }
 
 /** Daily email budget for digests, leaving room within it for sign-in codes. */
@@ -68,24 +65,13 @@ async function releaseEmailSlot(db: Db, now = new Date()): Promise<void> {
   await db.run(sql`UPDATE email_usage SET sent = max(sent - 1, 0) WHERE day = ${today(now)}`);
 }
 
-async function deliver(
-  config: Config,
-  email: Email,
-  idempotencyKey: string | undefined,
-  db: Db | undefined,
-): Promise<void> {
+async function deliver(config: Config, email: Email, idempotencyKey: string | undefined): Promise<void> {
   if (transport) {
     await transport({ ...email, from: config.emailFrom }, { idempotencyKey });
     return;
   }
-  // An app password, when set, is used first: it needs no connection step.
   if (config.gmailAppPassword) {
     await sendWithAppPassword(config, email);
-    return;
-  }
-  const account = db ? await getAccount(db) : null;
-  if (db && account) {
-    await sendWithGmail(db, config, account, email);
     return;
   }
   // No delivery method yet. On this machine the email is printed so sign-in works during
@@ -120,7 +106,7 @@ export async function sendEmail(config: Config, email: Email, options: SendOptio
   const { db, limit = null, idempotencyKey } = options;
   if (db && !(await reserveEmailSlot(db, limit))) return false;
   try {
-    await deliver(config, email, idempotencyKey, db);
+    await deliver(config, email, idempotencyKey);
   } catch (err) {
     if (db) await releaseEmailSlot(db);
     throw err;

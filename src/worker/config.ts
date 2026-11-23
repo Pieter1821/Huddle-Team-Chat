@@ -17,8 +17,6 @@ const schema = z.object({
   EMAIL_FROM: optional,
   GOOGLE_CLIENT_ID: optional,
   GOOGLE_CLIENT_SECRET: optional,
-  GMAIL_CLIENT_ID: optional,
-  GMAIL_CLIENT_SECRET: optional,
   GMAIL_ADDRESS: z
     .union([z.literal(''), z.email({ message: 'GMAIL_ADDRESS must be the Gmail address to send from' })])
     .optional(),
@@ -49,9 +47,7 @@ export type Config = {
   google: { clientId: string; clientSecret: string } | null;
   /** Sending through Gmail with an app password (the simple way): address and password. */
   gmailAppPassword: { address: string; password: string } | null;
-  /** The OAuth client for sending email through the team's own Gmail (Admin > Email). */
-  gmail: { clientId: string; clientSecret: string } | null;
-  /** The display name on outgoing email (the address is the connected Gmail account). */
+  /** The display name on outgoing email (the address is the Gmail account). */
   emailName: string;
 };
 
@@ -86,10 +82,6 @@ export function getConfig(env: Env, origin?: string | null): Config {
             // Google shows app passwords in groups of four ("abcd efgh ijkl mnop").
             password: v.GMAIL_APP_PASSWORD.replace(/\s+/g, ''),
           }
-        : null,
-    gmail:
-      v.GMAIL_CLIENT_ID && v.GMAIL_CLIENT_SECRET
-        ? { clientId: v.GMAIL_CLIENT_ID, clientSecret: v.GMAIL_CLIENT_SECRET }
         : null,
     emailName: (/^\s*"?([^"<]+?)"?\s*</.exec(v.EMAIL_FROM ?? '')?.[1] ?? 'Huddle').trim(),
   };

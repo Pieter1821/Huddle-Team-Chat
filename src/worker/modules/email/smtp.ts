@@ -5,7 +5,7 @@ import { connect } from 'cloudflare:sockets';
 import type { Config } from '../../config';
 import { AppError } from '../../lib/errors';
 import type { Email } from '../../lib/email';
-import { buildMessage } from './gmail';
+import { buildMessage } from './mime';
 
 export const SMTP_HOST = 'smtp.gmail.com';
 export const SMTP_PORT = 465;

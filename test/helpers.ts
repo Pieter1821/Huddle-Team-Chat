@@ -128,7 +128,6 @@ export async function resetDb() {
     'totp_enrollment',
     'totp_reset_link',
     'totp_credential',
-    'email_account',
     'push_subscription',
     'push_key',
     'audit_log',

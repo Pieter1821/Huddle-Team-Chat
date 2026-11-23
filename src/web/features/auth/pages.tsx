@@ -8,8 +8,6 @@ import { ApiError, api } from '@/lib/api';
 import { useBranding, useMe, useSignOut } from '@/lib/queries';
 import type { InvitationPreview } from '@/lib/types';
 import { AuthLayout, FormError } from './auth-layout';
-import { AppPasswordSteps } from '@/components/gmail-setup-steps';
-import { GMAIL_RESULTS } from '@/lib/gmail-results';
 import { AuthenticatorSetup, AuthenticatorSignInForm, OwnerSetup } from './authenticator';
 import { SignInForm } from './sign-in-form';
 
@@ -28,11 +26,9 @@ export function SignInPage() {
     params.get('next')?.startsWith('/') && !params.get('next')?.startsWith('//') ? params.get('next')! : '/';
   const email = useQuery({
     queryKey: ['email-status'],
-    queryFn: () =>
-      api<{ ready: boolean; gmail: string; canConnect: boolean; needsSetup: boolean }>('/email/status'),
+    queryFn: () => api<{ ready: boolean; needsSetup: boolean }>('/email/status'),
   });
   const [mode, setMode] = useState<'email' | 'app' | 'owner' | null>(null);
-  const result = params.get('gmail');
   const done = () => void navigate(next, { replace: true });
 
   if (me.data) return <Navigate to={next} replace />;
@@ -50,7 +46,7 @@ export function SignInPage() {
   }
   if (!email.data) return <AuthLayout title={`Sign in to ${branding?.name ?? 'Huddle'}`}>{null}</AuthLayout>;
 
-  const { ready, needsSetup, canConnect } = email.data;
+  const { ready, needsSetup } = email.data;
   const current = mode ?? (needsSetup ? (ready ? 'email' : 'owner') : ready ? 'email' : 'app');
   const switcher = (to: 'email' | 'app' | 'owner', label: string) => (
     <button
@@ -72,23 +68,6 @@ export function SignInPage() {
         <div className="mt-5 space-y-3 border-t border-rule pt-4">
           {needsSetup && ready && switcher('email', 'Email me a sign-in code instead')}
           {!needsSetup && switcher('app', 'Back to sign in')}
-          {!ready && (
-            <details className="text-sm">
-              <summary className="cursor-pointer text-muted">Optional: set up email (Gmail) too</summary>
-              <div className="mt-3 space-y-3">
-                {canConnect ? (
-                  <Button asChild variant="ghost" className="w-full">
-                    <a href="/api/email/google/start">Connect Gmail</a>
-                  </Button>
-                ) : (
-                  <AppPasswordSteps />
-                )}
-                {result && result !== 'connected' && (
-                  <FormError message={GMAIL_RESULTS[result]?.text ?? null} />
-                )}
-              </div>
-            </details>
-          )}
         </div>
       </AuthLayout>
     );
@@ -99,9 +78,7 @@ export function SignInPage() {
       title={`Sign in to ${branding?.name ?? 'Huddle'}`}
       subtitle={
         current === 'email'
-          ? result === 'connected'
-            ? 'Gmail is connected. Enter your email and we’ll send your code.'
-            : 'No password: we’ll email you a one-time code.'
+          ? 'No password: we’ll email you a one-time code.'
           : 'Use the 6-digit code from your authenticator app.'
       }
     >

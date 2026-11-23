@@ -45,21 +45,17 @@ test('signed out: the sign-in screen', async ({ browser }) => {
   expect(problems, problems.join('\n')).toEqual([]);
 });
 
-test('fresh install: the sign-in page asks to connect Gmail first', async ({ browser }) => {
+test('fresh install: the owner sets up with the setup key and an authenticator app', async ({ browser }) => {
   const context = await browser.newContext({ baseURL: ORIGIN, storageState: { cookies: [], origins: [] } });
   const page = await context.newPage();
-  // On a real server with no Gmail yet (this test server prints emails, so it reports ready).
+  // A real server with no email set up (this test server prints emails, so it reports ready).
   await page.route('**/api/email/status', (route) =>
-    route.fulfill({ json: { ready: false, gmail: 'not-connected', canConnect: true, needsSetup: true } }),
+    route.fulfill({ json: { ready: false, needsSetup: true } }),
   );
-  await page.goto('/signin?gmail=wrong-account');
-  await expect(page.getByRole('heading', { name: 'Connect Gmail to get started' })).toBeVisible();
-  await expect(page.getByText('That Google account can’t be used here.')).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Connect Gmail' })).toHaveAttribute(
-    'href',
-    '/api/email/google/start',
-  );
-  const problems = await audit(page, 'connect Gmail');
+  await page.goto('/signin');
+  await expect(page.getByRole('heading', { name: 'Set up Huddle' })).toBeVisible();
+  await expect(page.getByLabel('Setup key')).toBeVisible();
+  const problems = await audit(page, 'owner setup');
   await context.close();
   expect(problems, problems.join('\n')).toEqual([]);
 });
@@ -71,7 +67,7 @@ test('privacy policy and terms are public, linked from sign-in, and accessible',
   const legal = page.getByRole('navigation', { name: 'Legal' });
   await legal.getByRole('link', { name: 'Privacy policy' }).click();
   await expect(page.getByRole('heading', { name: 'Privacy policy', level: 1 })).toBeVisible();
-  await expect(page.getByText('Limited Use requirements')).toBeVisible();
+  await expect(page.getByText('It never reads, stores or deletes mail', { exact: false })).toBeVisible();
   const problems = await audit(page, 'privacy policy');
   await page.getByRole('link', { name: 'Terms of use' }).click();
   await expect(page.getByRole('heading', { name: 'Terms of use', level: 1 })).toBeVisible();

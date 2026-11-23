@@ -96,7 +96,7 @@ describe('sending with a Gmail app password', () => {
     const gmail = fakeGmail();
     expect(await sendEmail(config, email, { db: getDb(env) })).toBe(true);
     expect(gmail.heard).toContain('DATA');
-    expect(await emailDeliveryConfigured(getDb(env), config)).toBe(true);
+    expect(await emailDeliveryConfigured(config)).toBe(true);
   });
 
   it('a message line starting with a dot cannot end the message early', async () => {

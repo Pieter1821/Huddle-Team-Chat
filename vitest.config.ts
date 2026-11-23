@@ -21,8 +21,6 @@ export default defineConfig(async () => {
             EMAIL_FROM: '',
             GOOGLE_CLIENT_ID: '',
             GOOGLE_CLIENT_SECRET: '',
-            GMAIL_CLIENT_ID: 'test-gmail-client.apps.googleusercontent.com',
-            GMAIL_CLIENT_SECRET: 'test-gmail-secret',
             GMAIL_ADDRESS: '',
             GMAIL_APP_PASSWORD: '',
           },

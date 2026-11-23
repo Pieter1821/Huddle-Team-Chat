@@ -85,25 +85,19 @@
   "cloudflare": {
     "bindings": {
       "ADMIN_EMAIL": {
-        "description": "The email address of the person who sets up and owns this Huddle (they sign in first). Use the address of a **Google account**: Huddle sends its sign-in codes through that account's Gmail."
+        "description": "The email address of the person who sets up and owns this Huddle. After deploying, open Huddle and sign in with it, the **setup key** below and an authenticator app."
       },
       "BETTER_AUTH_SECRET": {
-        "description": "At least **32 random letters and numbers** that nobody else knows. It protects sign-ins; keep a copy somewhere safe (changing it later signs everyone out)."
+        "description": "At least **32 random letters and numbers** that nobody else knows. It protects sign-ins and is your **setup key** for the first sign-in; keep a copy somewhere safe (changing it later signs everyone out)."
       },
       "APP_URL": {
         "description": "Leave **empty**: Huddle uses the address it's opened at. Set it only once you give Huddle its own domain, e.g. `https://chat.example.com`."
       },
       "GMAIL_ADDRESS": {
-        "description": "The Gmail address Huddle sends sign-in codes from (a dedicated one like `acme.huddle@gmail.com` is best). Can be added after deploying: Huddle's sign-in page shows how."
+        "description": "Optional. A Gmail address to send invitations and email summaries from (a dedicated one like `acme.huddle@gmail.com` is best). Without email, people sign in with an authenticator app."
       },
       "GMAIL_APP_PASSWORD": {
-        "description": "An **app password** for that Gmail (Google account › Security › 2-Step Verification on › App passwords). Can be added after deploying."
-      },
-      "GMAIL_CLIENT_ID": {
-        "description": "Leave empty: only for the alternative Google Cloud way of connecting Gmail."
-      },
-      "GMAIL_CLIENT_SECRET": {
-        "description": "Leave empty, like `GMAIL_CLIENT_ID`."
+        "description": "Optional. An **app password** for that Gmail (Google account \u203a Security \u203a 2-Step Verification on \u203a App passwords)."
       },
       "EMAIL_FROM": {
         "description": "Optional. The name shown on emails, e.g. `Acme Huddle <x@example.com>` (only the name is used)."
