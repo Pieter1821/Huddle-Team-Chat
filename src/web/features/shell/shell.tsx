@@ -9,6 +9,10 @@ import { useWorkspaceLive } from './use-workspace-live';
 
 // The chat view carries the editor (Tiptap/ProseMirror), the heaviest code in the app: it loads
 // on first use, so sign-in and setup stay small.
+const SettingsPage = lazy(() =>
+  import('@/features/settings/settings-page').then((m) => ({ default: m.SettingsPage })),
+);
+const AdminPage = lazy(() => import('@/features/admin/admin-page').then((m) => ({ default: m.AdminPage })));
 const ConversationView = lazy(() =>
   import('@/features/chat/conversation-view').then((m) => ({ default: m.ConversationView })),
 );
@@ -19,7 +23,10 @@ const ConversationView = lazy(() =>
  */
 export function Shell() {
   const match = useMatch('/c/:id/*');
-  const inConversation = Boolean(match);
+  const onSettings = useMatch('/settings');
+  const onAdmin = useMatch('/admin/*');
+  // On phones the main pane replaces the sidebar whenever something is open in it.
+  const inConversation = Boolean(match || onSettings || onAdmin);
   const { data: me } = useMe();
   useWorkspaceLive(me?.user.id, match?.params.id);
   return (
@@ -34,6 +41,22 @@ export function Shell() {
         <Routes>
           <Route path="/c/:id" element={<ConversationPane />} />
           <Route path="/c/:id/t/:threadId" element={<ConversationPane />} />
+          <Route
+            path="/settings"
+            element={
+              <Suspense fallback={null}>
+                <SettingsPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/admin/*"
+            element={
+              <Suspense fallback={null}>
+                <AdminPage />
+              </Suspense>
+            }
+          />
           <Route path="*" element={<NothingOpen />} />
         </Routes>
       </main>

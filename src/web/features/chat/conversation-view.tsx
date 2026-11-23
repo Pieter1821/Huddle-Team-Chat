@@ -11,6 +11,7 @@ import { Composer, type Mentionable } from './composer';
 import { toggleReaction, type Feed, type FeedMessage, type Thread } from './feed-state';
 import type { MessageActions } from './message-item';
 import { MessageList } from './message-list';
+import { ConversationDetails } from './conversation-details';
 import { ThreadPanel } from './thread-panel';
 import { discardFailed, feedKey, retryMessage, useFeed } from './use-feed';
 
@@ -31,6 +32,7 @@ export function ConversationView({
   const detail = useConversation(c.id);
   const members = useMembers();
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [atBottom, setAtBottom] = useState(true);
   const label = conversationLabel(c, myId);
@@ -141,11 +143,16 @@ export function ConversationView({
           <h1 className="truncate text-[15px] font-semibold">{label}</h1>
           {c.topic && <p className="hidden min-w-0 truncate text-sm text-meta sm:block">{c.topic}</p>}
           {detail.data && (
-            <span className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-meta" title="Members">
+            <button
+              type="button"
+              onClick={() => setDetailsOpen(true)}
+              aria-label={`Details: ${detail.data.members.length} members`}
+              title="Details and members"
+              className="ml-auto flex shrink-0 items-center gap-1.5 rounded-lg px-2 py-1 text-sm text-meta hover:bg-active hover:text-ink"
+            >
               <Users aria-hidden className="size-4" />
-              <span className="sr-only">Members:</span>
               {detail.data.members.length}
-            </span>
+            </button>
           )}
         </header>
 
@@ -229,6 +236,16 @@ export function ConversationView({
           <JoinBar conversationId={c.id} label={label} />
         )}
       </div>
+      {detailsOpen && (
+        <ConversationDetails
+          open
+          onOpenChange={setDetailsOpen}
+          conversation={c}
+          detail={detail.data}
+          label={label}
+          me={me}
+        />
+      )}
       {threadId && (
         <ThreadPanel
           key={threadId}

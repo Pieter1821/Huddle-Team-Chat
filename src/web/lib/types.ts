@@ -8,7 +8,15 @@ export type Me = {
   user: { id: string; name: string; email: string; image: string | null };
   role: Role;
   needsName: boolean;
-  workspace: { id: string; name: string; accent: string | null; logoFileId: string | null } | undefined;
+  workspace:
+    | {
+        id: string;
+        name: string;
+        accent: string | null;
+        logoFileId: string | null;
+        allowMemberGuestInvites?: boolean;
+      }
+    | undefined;
 };
 
 export type SidebarConversation = {
