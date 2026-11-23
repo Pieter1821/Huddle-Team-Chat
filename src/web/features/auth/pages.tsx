@@ -28,6 +28,18 @@ export function SignInPage() {
   });
   const result = params.get('gmail');
   if (me.data) return <Navigate to={next} replace />;
+  // The server says what's missing (setting names only) while Huddle is still being set up.
+  if (
+    email.error instanceof ApiError &&
+    (email.error.code === 'setup_incomplete' || email.error.code === 'database_setup_failed')
+  ) {
+    return (
+      <AuthLayout title="Almost there" subtitle="Huddle is running, but its setup isn’t finished.">
+        <FormError message={email.error.message} />
+        <p className="text-sm text-muted">Fix that in Cloudflare, wait a minute, then reload this page.</p>
+      </AuthLayout>
+    );
+  }
   if (email.data && !email.data.ready) {
     return (
       <AuthLayout

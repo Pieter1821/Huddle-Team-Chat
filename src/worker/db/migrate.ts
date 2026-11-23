@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+import { AppError } from '../lib/errors';
 // Huddle sets up and updates its own database tables the first time it runs after a deploy, so a
 // one-click deploy works whatever command deployed it. Applied migrations are recorded in the same
 // table `wrangler d1 migrations apply` uses, so the two never disagree or apply anything twice.
@@ -65,7 +66,12 @@ export function ensureMigrated(db: D1Database): Promise<void> {
     },
     (err: unknown) => {
       ready = null;
-      throw err;
+      console.error('database setup failed', err);
+      throw new AppError(
+        503,
+        'database_setup_failed',
+        'Huddle couldn’t set up its database. Check that the D1 database exists and is bound as DB.',
+      );
     },
   );
   return ready;
