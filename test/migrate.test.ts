@@ -17,7 +17,7 @@ describe('Huddle sets up its own database', () => {
     const tables = (
       await db.prepare("SELECT name FROM sqlite_master WHERE type IN ('table')").all<{ name: string }>()
     ).results.map((r) => r.name);
-    for (const t of ['user', 'workspace', 'message', 'message_fts', 'push_subscription', 'email_account']) {
+    for (const t of ['user', 'workspace', 'message', 'message_fts', 'push_subscription', 'totp_credential']) {
       expect(tables).toContain(t);
     }
     expect(await migrate(db)).toEqual([]); // already done: a restart changes nothing

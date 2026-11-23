@@ -8,6 +8,7 @@ export type Me = {
   user: { id: string; name: string; email: string; image: string | null };
   role: Role;
   needsName: boolean;
+  hasAuthenticator?: boolean;
   workspace:
     | {
         id: string;

@@ -59,11 +59,7 @@
         <li><strong>Cloudflare</strong> hosts and runs this Huddle and stores its data.</li>
         <li>
           <strong>Google (Gmail)</strong> sends sign-in codes, invitations and email summaries from the
-          workspace’s Gmail account, either through an app password or a Google connection that only
-          allows sending. Huddle only sends: it never reads, stores or deletes mail in that mailbox.
-          Huddle’s use and transfer of information received from Google APIs adheres to the
-          <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
-          including the Limited Use requirements.
+          workspace’s Gmail account, if one is set up, using an app password. Huddle only sends: it never reads, stores or deletes mail in that mailbox.
         </li>
         <li>
           <strong>Your browser’s push service</strong> (for example Google, Mozilla, Apple or Microsoft)
@@ -88,7 +84,7 @@
 
       <h2>Security</h2>
       <p>
-        Sign-in uses one-time codes (no passwords to leak), connections are encrypted, and stored
+        Sign-in uses one-time codes from an authenticator app or email (no passwords to leak), connections are encrypted, and stored
         secrets such as the Gmail connection are encrypted at rest. No system is perfectly secure; if
         something goes wrong, the workspace owner will tell affected people as the law requires.
       </p>

@@ -23,6 +23,7 @@ export type AuditAction =
   | 'member.role_changed'
   | 'member.deactivated'
   | 'member.reactivated'
+  | 'member.authenticator_reset'
   | 'import.started'
   | 'import.finished'
   | 'export.started';

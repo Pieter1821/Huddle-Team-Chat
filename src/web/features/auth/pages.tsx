@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useMemo, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Navigate, useNavigate, useParams, useSearchParams } from 'react-router';
 import { Button } from '@/components/ui/button';
@@ -8,11 +8,14 @@ import { ApiError, api } from '@/lib/api';
 import { useBranding, useMe, useSignOut } from '@/lib/queries';
 import type { InvitationPreview } from '@/lib/types';
 import { AuthLayout, FormError } from './auth-layout';
-import { AppPasswordSteps, GmailSetupSteps } from '@/components/gmail-setup-steps';
-import { GMAIL_RESULTS } from '@/lib/gmail-results';
+import { AuthenticatorSetup, AuthenticatorSignInForm, OwnerSetup } from './authenticator';
 import { SignInForm } from './sign-in-form';
 
-/** /signin: anyone who already has an account or an invitation. */
+/**
+ * /signin. Two ways in: an emailed code (when Gmail is set up) or an authenticator app (always).
+ * On a fresh install the owner starts with the setup key and an authenticator app, so Huddle works
+ * before any email is set up.
+ */
 export function SignInPage() {
   const navigate = useNavigate();
   const [params] = useSearchParams();
@@ -23,10 +26,11 @@ export function SignInPage() {
     params.get('next')?.startsWith('/') && !params.get('next')?.startsWith('//') ? params.get('next')! : '/';
   const email = useQuery({
     queryKey: ['email-status'],
-    queryFn: () =>
-      api<{ ready: boolean; gmail: string; canConnect: boolean; needsSetup: boolean }>('/email/status'),
+    queryFn: () => api<{ ready: boolean; needsSetup: boolean }>('/email/status'),
   });
-  const result = params.get('gmail');
+  const [mode, setMode] = useState<'email' | 'app' | 'owner' | null>(null);
+  const done = () => void navigate(next, { replace: true });
+
   if (me.data) return <Navigate to={next} replace />;
   // The server says what's missing (setting names only) while Huddle is still being set up.
   if (
@@ -40,50 +44,70 @@ export function SignInPage() {
       </AuthLayout>
     );
   }
-  if (email.data && !email.data.ready) {
+  if (!email.data) return <AuthLayout title={`Sign in to ${branding?.name ?? 'Huddle'}`}>{null}</AuthLayout>;
+
+  const { ready, needsSetup } = email.data;
+  const current = mode ?? (needsSetup ? (ready ? 'email' : 'owner') : ready ? 'email' : 'app');
+  const switcher = (to: 'email' | 'app' | 'owner', label: string) => (
+    <button
+      type="button"
+      className="text-sm font-medium text-action underline-offset-2 hover:underline"
+      onClick={() => setMode(to)}
+    >
+      {label}
+    </button>
+  );
+
+  if (current === 'owner') {
     return (
       <AuthLayout
-        title={email.data.needsSetup ? 'Connect Gmail to get started' : 'Sign-in emails are paused'}
-        subtitle={
-          email.data.needsSetup
-            ? 'Huddle emails sign-in codes from your own Gmail. Connect it once, with the owner’s Google account.'
-            : 'Gmail stopped accepting Huddle. The owner can reconnect it, with the owner’s Google account or the same Gmail as before.'
-        }
+        title={needsSetup ? 'Set up Huddle' : 'Set up your authenticator again'}
+        subtitle="Sign in with an authenticator app: no email needed."
       >
-        {result && result !== 'connected' && <FormError message={GMAIL_RESULTS[result]?.text ?? null} />}
-        {email.data.canConnect ? (
-          <Button asChild className="w-full">
-            <a href="/api/email/google/start">
-              {email.data.needsSetup ? 'Connect Gmail' : 'Reconnect Gmail'}
-            </a>
-          </Button>
-        ) : (
-          <div className="space-y-4">
-            <p className="text-sm text-muted">Set up Gmail sending once (about 5 minutes):</p>
-            <AppPasswordSteps />
-            <details>
-              <summary className="cursor-pointer text-sm font-medium text-action">
-                Or use a Google Cloud project instead
-              </summary>
-              <div className="mt-3">
-                <GmailSetupSteps redirectUri={`${window.location.origin}/api/email/google/callback`} />
-              </div>
-            </details>
-          </div>
-        )}
+        <OwnerSetup onSignedIn={done} />
+        <div className="mt-5 space-y-3 border-t border-rule pt-4">
+          {needsSetup && ready && switcher('email', 'Email me a sign-in code instead')}
+          {!needsSetup && switcher('app', 'Back to sign in')}
+        </div>
       </AuthLayout>
     );
   }
+
   return (
     <AuthLayout
       title={`Sign in to ${branding?.name ?? 'Huddle'}`}
       subtitle={
-        result === 'connected'
-          ? 'Gmail is connected. Enter your email and we’ll send your code.'
-          : 'No password: we’ll email you a one-time code.'
+        current === 'email'
+          ? 'No password: we’ll email you a one-time code.'
+          : 'Use the 6-digit code from your authenticator app.'
       }
     >
-      <SignInForm onSignedIn={() => void navigate(next, { replace: true })} />
+      {current === 'email' ? <SignInForm onSignedIn={done} /> : <AuthenticatorSignInForm onSignedIn={done} />}
+      <div className="mt-5 flex flex-col items-start gap-2 border-t border-rule pt-4">
+        {current === 'email'
+          ? switcher('app', 'Use an authenticator app instead')
+          : ready && switcher('email', 'Email me a code instead')}
+        {current === 'app' && switcher('owner', 'Owner: set up the app again with the setup key')}
+      </div>
+    </AuthLayout>
+  );
+}
+
+/** /authenticator/:token: setting up the app again after an admin's reset link (lost phone). */
+export function AuthenticatorResetPage() {
+  const { token = '' } = useParams();
+  const navigate = useNavigate();
+  const startWith = useMemo(() => ({ resetToken: token }), [token]);
+  return (
+    <AuthLayout
+      title="Set up your authenticator app"
+      subtitle="Your admin sent you this link to set up the app again."
+    >
+      <AuthenticatorSetup
+        startWith={startWith}
+        onDone={() => void navigate('/', { replace: true })}
+        onBack={() => void navigate('/signin', { replace: true })}
+      />
     </AuthLayout>
   );
 }
@@ -181,8 +205,42 @@ export function InvitePage() {
         </>
       }
     >
-      <SignInForm fixedEmail={email} onSignedIn={() => void navigate('/', { replace: true })} />
+      <InviteSignIn token={token} email={email} onSignedIn={() => void navigate('/', { replace: true })} />
     </AuthLayout>
+  );
+}
+
+/** Joining from an invitation: an emailed code when email works, otherwise (or by choice) the app. */
+function InviteSignIn({
+  token,
+  email,
+  onSignedIn,
+}: {
+  token: string;
+  email: string;
+  onSignedIn: () => void;
+}) {
+  const status = useQuery({
+    queryKey: ['email-status'],
+    queryFn: () => api<{ ready: boolean }>('/email/status'),
+  });
+  const [useApp, setUseApp] = useState(false);
+  const startWith = useMemo(() => ({ inviteToken: token }), [token]);
+  if (!status.data) return null;
+  if (useApp || !status.data.ready) {
+    return <AuthenticatorSetup startWith={startWith} onDone={() => onSignedIn()} />;
+  }
+  return (
+    <div className="space-y-5">
+      <SignInForm fixedEmail={email} onSignedIn={onSignedIn} />
+      <button
+        type="button"
+        className="text-sm font-medium text-action underline-offset-2 hover:underline"
+        onClick={() => setUseApp(true)}
+      >
+        Use an authenticator app instead
+      </button>
+    </div>
   );
 }
 

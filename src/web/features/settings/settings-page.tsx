@@ -4,7 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { LegalLinks } from '@/components/legal-links';
+import { ConfirmButton } from '@/components/ui/confirm-button';
 import { Card, Page, SaveNote, Select } from '@/components/ui/page';
+import { AuthenticatorSetup } from '@/features/auth/authenticator';
 import { ApiError, api } from '@/lib/api';
 import {
   disablePush,
@@ -35,6 +37,7 @@ export function SettingsPage() {
   return (
     <Page title="Your settings">
       <ProfileCard name={me.user.name} email={me.user.email} />
+      <AuthenticatorCard on={Boolean(me.hasAuthenticator)} />
       <DeviceCard />
       <NotificationsCard />
       <LegalLinks className="px-1 pb-4" />
@@ -93,6 +96,59 @@ function ProfileCard({ name: current, email }: { name: string; email: string }) 
           <SaveNote state={note} />
         </div>
       </form>
+    </Card>
+  );
+}
+
+/** Your own account (signed in): each time the setup opens it starts afresh. */
+const SELF = {};
+
+/** Signing in with an authenticator app: set it up, replace it (new phone) or turn it off. */
+function AuthenticatorCard({ on }: { on: boolean }) {
+  const client = useQueryClient();
+  const [setting, setSetting] = useState(false);
+  const [note, setNote] = useState<Note>(null);
+
+  return (
+    <Card
+      title="Authenticator app"
+      description="Sign in with a 6-digit code from an app on your phone (Google Authenticator, Microsoft Authenticator, Authy, 1Password…) instead of waiting for an email."
+    >
+      {setting ? (
+        <div className="max-w-sm">
+          <AuthenticatorSetup
+            startWith={SELF}
+            onDone={() => {
+              setSetting(false);
+              setNote({ ok: true, text: 'Your authenticator app is set up.' });
+              void client.invalidateQueries({ queryKey: ['me'] });
+            }}
+            onBack={() => setSetting(false)}
+          />
+        </div>
+      ) : (
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-[15px]">{on ? 'On.' : 'Not set up.'}</p>
+          <Button variant={on ? 'ghost' : 'primary'} size="sm" onClick={() => setSetting(true)}>
+            {on ? 'Move to a new phone' : 'Set up'}
+          </Button>
+          {on && (
+            <ConfirmButton
+              title="Turn off the authenticator app?"
+              description="You’ll only be able to sign in with an emailed code. If this Huddle doesn’t send email, you’ll need an admin’s reset link to get back in."
+              confirmLabel="Turn off"
+              onConfirm={async () => {
+                await api('/me/authenticator/remove', { json: {} });
+                setNote({ ok: true, text: 'Turned off.' });
+                await client.invalidateQueries({ queryKey: ['me'] });
+              }}
+            >
+              Turn off
+            </ConfirmButton>
+          )}
+          <SaveNote state={note} />
+        </div>
+      )}
     </Card>
   );
 }

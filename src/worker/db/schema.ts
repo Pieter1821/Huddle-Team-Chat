@@ -546,17 +546,41 @@ export const pushKey = sqliteTable('push_key', {
 });
 
 /* ---------------------------------------------------------------------------------------------
- * Outgoing email through the team's own Gmail account. One row at most; the refresh token Google
- * issues is stored sealed with a key derived from the server secret.
+ * Signing in with an authenticator app (6-digit codes that change every 30 seconds), as an
+ * alternative to email codes. Secrets are stored sealed with a key derived from the server secret.
  * ------------------------------------------------------------------------------------------- */
 
-export const emailAccount = sqliteTable('email_account', {
-  id: text('id').primaryKey(), // always 'gmail'
-  address: text('address').notNull(),
-  refreshToken: text('refresh_token').notNull(), // sealed
-  connectedBy: text('connected_by'), // null when connected before setup (by the owner, pre sign-in)
-  connectedAt: createdAt(),
-  // Set when Google stopped accepting the token (password changed, access removed, unused for
-  // months): admins are asked to reconnect.
-  needsReconnectAt: timestamp('needs_reconnect_at'),
+export const totpCredential = sqliteTable('totp_credential', {
+  userId: text('user_id')
+    .primaryKey()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  secret: text('secret').notNull(), // sealed
+  // The last 30-second step a code was accepted for: the same code can't be used twice.
+  lastStep: integer('last_step').notNull().default(0),
+  failedCount: integer('failed_count').notNull().default(0),
+  lockedUntil: timestamp('locked_until'),
+  createdAt: createdAt(),
+});
+
+/** A scan in progress: the secret shown as a QR code, until the person confirms it with a code. */
+export const totpEnrollment = sqliteTable('totp_enrollment', {
+  id: text('id').primaryKey(),
+  email: text('email').notNull(),
+  secret: text('secret').notNull(), // sealed
+  kind: text('kind', { enum: ['owner', 'invite', 'reset', 'self'] }).notNull(),
+  ref: text('ref'), // invitation id, reset link hash or user id
+  expiresAt: timestamp('expires_at').notNull(),
+});
+
+/** A one-time link an admin gives someone who lost their phone, to set up the app again. */
+export const totpResetLink = sqliteTable('totp_reset_link', {
+  tokenHash: text('token_hash').primaryKey(),
+  userId: text('user_id')
+    .notNull()
+    .references(() => user.id, { onDelete: 'cascade' }),
+  createdBy: text('created_by')
+    .notNull()
+    .references(() => user.id),
+  expiresAt: timestamp('expires_at').notNull(),
+  usedAt: timestamp('used_at'),
 });

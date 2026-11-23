@@ -125,7 +125,9 @@ export async function addMember(
 /** Empties every table (children first, because D1 enforces foreign keys). */
 export async function resetDb() {
   const tables = [
-    'email_account',
+    'totp_enrollment',
+    'totp_reset_link',
+    'totp_credential',
     'push_subscription',
     'push_key',
     'audit_log',

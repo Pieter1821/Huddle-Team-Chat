@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { user, workspace } from '../../db/schema';
+import { user, workspace, totpCredential } from '../../db/schema';
 import { forbidden } from '../../lib/errors';
 import { jsonBody } from '../../lib/validate';
 import { requireActor, type AppEnv } from '../../middleware/context';
@@ -18,13 +18,24 @@ export const meRoutes = new Hono<AppEnv>()
       where: eq(workspace.id, actor.workspaceId),
       columns: { id: true, name: true, accent: true, logoFileId: true, allowMemberGuestInvites: true },
     });
+    const totp = await db.query.totpCredential.findFirst({
+      where: eq(totpCredential.userId, actor.userId),
+      columns: { userId: true },
+    });
     return c.json({
       user: { id: actor.userId, name: actor.name, email: actor.email, image: session.user.image ?? null },
+      hasAuthenticator: Boolean(totp),
       role: actor.role,
       // Email-code sign-ups start without a name; the app asks for one when this is true.
       needsName: actor.name.trim() === '',
       workspace: ws,
     });
+  })
+  // Turns off signing in with an authenticator app for yourself.
+  .post('/authenticator/remove', requireActor, async (c) => {
+    const { actor, db } = c.var;
+    await db.delete(totpCredential).where(eq(totpCredential.userId, actor.userId));
+    return c.body(null, 204);
   })
   .patch('/', requireActor, jsonBody(z.object({ name: displayName })), async (c) => {
     const { actor, db } = c.var;
