@@ -1,9 +1,11 @@
+import { existsSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { ORIGIN, conversationId, signInOwner } from './helpers';
 
 // One sign-in for the whole file (sign-in codes are rate limited per address), shared by every test.
 const SESSION = '.wrangler/e2e/owner-session.json';
 test.beforeAll(async ({ browser }) => {
+  if (existsSync(SESSION)) return; // a retry reuses it rather than asking for another code
   const context = await browser.newContext({ baseURL: ORIGIN, storageState: { cookies: [], origins: [] } });
   const page = await context.newPage();
   await signInOwner(page);
@@ -35,11 +37,14 @@ test('installable app: manifest, service worker and the offline page', async ({ 
 
 test('turn notifications on and off for this device', async ({ page, context }) => {
   await context.grantPermissions(['notifications'], { origin: ORIGIN });
-  // Test browsers can't reach a real push service, so the browser's subscribe step is stood in for
-  // with a real key pair; everything from there on (the API, validation, storage) is the real thing.
+  // Test browsers can't reach a real push service (and headless ones refuse notification permission),
+  // so the browser's permission prompt and subscribe step are stood in for, with a real key pair;
+  // everything from there on (the API, validation, storage) is the real thing.
   await page.addInitScript({
     content: `
       let current = null;
+      Object.defineProperty(Notification, 'permission', { get: () => 'granted' });
+      Notification.requestPermission = () => Promise.resolve('granted');
       const b64 = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)))
         .replaceAll('+', '-').replaceAll('/', '_').replace(/=+$/, '');
       PushManager.prototype.getSubscription = () => Promise.resolve(current);
