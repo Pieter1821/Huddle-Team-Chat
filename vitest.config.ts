@@ -11,6 +11,8 @@ export default defineConfig(async () => {
       cloudflareTest({
         wrangler: { configPath: './wrangler.jsonc' },
         miniflare: {
+          // An empty database for checking that Huddle sets up its own tables from nothing.
+          d1Databases: ['FRESH_DB'],
           bindings: {
             TEST_MIGRATIONS: migrations,
             APP_URL: 'http://localhost:8787',
