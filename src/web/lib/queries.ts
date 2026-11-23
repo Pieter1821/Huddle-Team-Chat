@@ -74,6 +74,7 @@ export type ConversationDetail = {
     kind: SidebarConversation['kind'];
     name: string | null;
     topic: string | null;
+    lastSeq: number;
     archivedAt: string | null;
   };
   members: { userId: string; name: string; image: string | null; role: Role }[];
@@ -81,9 +82,11 @@ export type ConversationDetail = {
   guestCount: number;
 };
 
-export function useConversation(id: string) {
-  return useQuery({
+export function useConversation(id: string, enabled = true) {
+  return useQuery<ConversationDetail, ApiError>({
     queryKey: ['conversation', id],
     queryFn: () => api<ConversationDetail>(`/conversations/${id}`),
+    enabled,
+    retry: false,
   });
 }

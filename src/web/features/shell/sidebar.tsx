@@ -1,9 +1,24 @@
-import { Hash, Lock, LogOut } from 'lucide-react';
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
+import { Hash, Lock, LogOut, Plus, Search } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { conversationLabel, useConversations, useMe, useSignOut } from '@/lib/queries';
 import type { SidebarConversation } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+// Dialogs load the first time they're opened, keeping the first page load small.
+const SearchDialog = lazy(() => import('./search-dialog').then((m) => ({ default: m.SearchDialog })));
+const NewChannelDialog = lazy(() =>
+  import('./new-conversation').then((m) => ({ default: m.NewChannelDialog })),
+);
+const BrowseChannelsDialog = lazy(() =>
+  import('./new-conversation').then((m) => ({ default: m.BrowseChannelsDialog })),
+);
+const NewMessageDialog = lazy(() =>
+  import('./new-conversation').then((m) => ({ default: m.NewMessageDialog })),
+);
+
+type Open = 'search' | 'new-channel' | 'browse' | 'new-message' | null;
 
 /** The left column: the team, its channels, your direct messages, and you. */
 export function Sidebar({ className }: { className?: string }) {
@@ -11,6 +26,24 @@ export function Sidebar({ className }: { className?: string }) {
   const conversations = useConversations(Boolean(me));
   const channels = conversations.data?.filter((c) => c.kind === 'public' || c.kind === 'private') ?? [];
   const dms = conversations.data?.filter((c) => c.kind === 'dm' || c.kind === 'group_dm') ?? [];
+  const [open, setOpen] = useState<Open>(null);
+  const dialog = (name: Exclude<Open, null>) => ({
+    open: open === name,
+    onOpenChange: (o: boolean) => setOpen(o ? name : null),
+  });
+  const isGuest = me?.role === 'guest';
+
+  // Ctrl+K (Cmd+K on a Mac) opens search from anywhere.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setOpen('search');
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   return (
     <nav aria-label="Conversations" className={cn('flex h-full flex-col bg-raised', className)}>
@@ -18,6 +51,18 @@ export function Sidebar({ className }: { className?: string }) {
         <img src="/brand/huddle-mark-64.png" alt="" className="size-7 rounded-md" />
         <span className="truncate text-[15px] font-semibold">{me?.workspace?.name ?? 'Huddle'}</span>
       </header>
+
+      <div className="px-3 pt-3">
+        <button
+          type="button"
+          onClick={() => setOpen('search')}
+          className="flex h-9 w-full items-center gap-2 rounded-pill bg-ground px-3 text-sm text-meta edge hover:text-ink"
+        >
+          <Search aria-hidden className="size-4" />
+          Search
+          <kbd className="ml-auto hidden font-sans text-xs text-meta sm:block">Ctrl K</kbd>
+        </button>
+      </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
         {conversations.isPending ? (
@@ -36,13 +81,29 @@ export function Sidebar({ className }: { className?: string }) {
               items={channels}
               myId={me?.user.id}
               empty="You haven’t joined any channels yet."
+              action={isGuest ? null : <AddButton label="Add a channel" onClick={() => setOpen('browse')} />}
             />
-            <Section title="Direct messages" items={dms} myId={me?.user.id} empty="No direct messages yet." />
+            <Section
+              title="Direct messages"
+              items={dms}
+              myId={me?.user.id}
+              empty="No direct messages yet."
+              action={<AddButton label="New message" onClick={() => setOpen('new-message')} />}
+            />
           </>
         )}
       </div>
 
       {me && <YouCard name={me.user.name} email={me.user.email} />}
+
+      <Suspense fallback={null}>
+        {open === 'search' && <SearchDialog {...dialog('search')} />}
+        {open === 'new-channel' && <NewChannelDialog {...dialog('new-channel')} />}
+        {open === 'browse' && (
+          <BrowseChannelsDialog {...dialog('browse')} onCreate={() => setOpen('new-channel')} />
+        )}
+        {open === 'new-message' && <NewMessageDialog {...dialog('new-message')} />}
+      </Suspense>
     </nav>
   );
 }
@@ -52,18 +113,23 @@ function Section({
   items,
   myId,
   empty,
+  action,
 }: {
   title: string;
   items: SidebarConversation[];
   myId: string | undefined;
   empty: string;
+  action?: ReactNode;
 }) {
   const id = `section-${title.replace(/\s+/g, '-').toLowerCase()}`;
   return (
     <section aria-labelledby={id} className="mb-6">
-      <h2 id={id} className="px-3 pb-1.5 text-[13px] font-medium text-meta">
-        {title}
-      </h2>
+      <div className="flex items-center justify-between pr-1 pb-1.5 pl-3">
+        <h2 id={id} className="text-[13px] font-medium text-meta">
+          {title}
+        </h2>
+        {action}
+      </div>
       {items.length === 0 ? (
         <p className="px-3 text-[13px] text-meta">{empty}</p>
       ) : (
@@ -166,5 +232,19 @@ function SkeletonList() {
         />
       ))}
     </div>
+  );
+}
+
+function AddButton({ label, ...props }: { label: string } & React.ComponentProps<'button'>) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      {...props}
+      className="grid size-6 place-items-center rounded-md text-meta hover:bg-active hover:text-ink"
+    >
+      <Plus aria-hidden className="size-4" />
+    </button>
   );
 }

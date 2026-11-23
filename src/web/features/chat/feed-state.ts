@@ -146,3 +146,36 @@ function update(
 ): FeedMessage[] {
   return messages.map((m) => (m.id === id ? { ...m, ...patch(m) } : m));
 }
+
+/* ------------------------------------------------------------------------------- threads */
+
+export type Thread = { parent: FeedMessage; replies: FeedMessage[] };
+
+/**
+ * An open thread, updated by the same events as the conversation (which arrive in order through
+ * the conversation's queue). Every change is idempotent, so seeing an event twice changes nothing.
+ */
+export function applyToThread(thread: Thread, event: ConversationEvent): Thread {
+  const { parent } = thread;
+  switch (event.type) {
+    case 'message.created': {
+      const m = event.data.message;
+      if (m.parentId !== parent.id) return thread;
+      return { ...thread, replies: upsertConfirmed(thread.replies, m) };
+    }
+    case 'message.edited':
+    case 'message.deleted':
+    case 'reaction.added':
+    case 'reaction.removed': {
+      const id = event.data.messageId;
+      // Deleted replies leave the thread; a deleted parent keeps its place so replies still read.
+      if (event.type === 'message.deleted' && id !== parent.id) {
+        return { ...thread, replies: thread.replies.filter((r) => r.id !== id) };
+      }
+      const [p] = applyToMessages([parent], event);
+      return { parent: p ?? parent, replies: applyToMessages(thread.replies, event) };
+    }
+    default:
+      return thread;
+  }
+}

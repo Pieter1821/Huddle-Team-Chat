@@ -109,3 +109,9 @@
   padding-left: 12px;
   color: var(--color-muted);
 }
+.huddle-editor .tiptap .mention {
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--color-action) 18%, transparent);
+  padding: 0 2px;
+  font-weight: 500;
+}

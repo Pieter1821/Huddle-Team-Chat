@@ -1,20 +1,31 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Hash, Lock, Users } from 'lucide-react';
-import { Link } from 'react-router';
+import { Link, useNavigate } from 'react-router';
+import type { QueryClient } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { api, ApiError } from '@/lib/api';
 import { conversationLabel, useConversation, useMembers, type Member } from '@/lib/queries';
 import type { Me, SidebarConversation } from '@/lib/types';
-import { Composer } from './composer';
-import { toggleReaction, type Feed, type FeedMessage } from './feed-state';
+import { Composer, type Mentionable } from './composer';
+import { toggleReaction, type Feed, type FeedMessage, type Thread } from './feed-state';
 import type { MessageActions } from './message-item';
 import { MessageList } from './message-list';
-import { discardFailed, feedKey, sendMessage, useFeed } from './use-feed';
+import { ThreadPanel } from './thread-panel';
+import { discardFailed, feedKey, retryMessage, useFeed } from './use-feed';
 
-/** An open channel or direct message: header, live history, typing line and composer. */
-export function ConversationView({ conversation: c, me }: { conversation: SidebarConversation; me: Me }) {
+/** An open channel or direct message: header, live history, typing line, composer, and a thread. */
+export function ConversationView({
+  conversation: c,
+  me,
+  threadId,
+}: {
+  conversation: SidebarConversation;
+  me: Me;
+  threadId?: string | undefined;
+}) {
   const client = useQueryClient();
+  const navigate = useNavigate();
   const myId = me.user.id;
   const { feed, connection, typingUserIds, sendTyping, send, loadOlder, loadingOlder } = useFeed(c.id, myId);
   const detail = useConversation(c.id);
@@ -52,18 +63,10 @@ export function ConversationView({ conversation: c, me }: { conversation: Sideba
       react: (m, emoji, on) => {
         // Optimistic: the socket event that follows is ignored if it changes nothing.
         const patch = (add: boolean) =>
-          client.setQueryData<Feed>(feedKey(c.id), (f) =>
-            f
-              ? {
-                  ...f,
-                  messages: f.messages.map((x) =>
-                    x.id === m.id
-                      ? { ...x, reactions: toggleReaction(x.reactions ?? [], emoji, myId, add) }
-                      : x,
-                  ),
-                }
-              : f,
-          );
+          patchMessage(client, c.id, m.id, (x) => ({
+            ...x,
+            reactions: toggleReaction(x.reactions ?? [], emoji, myId, add),
+          }));
         patch(on);
         const path = `/conversations/${c.id}/messages/${m.id}/reactions`;
         const req = on
@@ -84,13 +87,30 @@ export function ConversationView({ conversation: c, me }: { conversation: Sideba
           setError(err instanceof ApiError ? err.message : 'That message wasn’t deleted.');
         }
       },
-      retry: (m) => {
-        if (m.clientMsgId) void sendMessage(client, c.id, myId, m.body, m.clientMsgId).catch(() => undefined);
-      },
-      discard: (m) => m.clientMsgId && discardFailed(client, c.id, m.clientMsgId),
+      retry: (m) => retryMessage(client, m, myId),
+      discard: (m) => discardFailed(client, m),
+      openThread: (m) => void navigate(`/c/${c.id}/t/${m.id}`),
     }),
-    [client, c.id, myId],
+    [client, c.id, myId, navigate],
   );
+
+  // Who @ can suggest: the people in this conversation, plus everyone-at-once in channels.
+  const mentionables = useMemo<Mentionable[]>(() => {
+    const people = (detail.data?.members ?? [])
+      .filter((m) => m.userId !== myId)
+      .map((m) => ({
+        id: m.userId,
+        label: m.name || 'Someone',
+        ...(m.role === 'guest' ? { hint: 'Guest' } : {}),
+      }));
+    return isChannel
+      ? [
+          ...people,
+          { id: 'here', label: 'here', hint: 'Everyone online' },
+          { id: 'channel', label: 'channel', hint: 'Everyone in this channel' },
+        ]
+      : people;
+  }, [detail.data, isChannel, myId]);
 
   const editLast = () => {
     const last = [...messages].reverse().find((m) => m.authorId === myId && !m.pending && !m.deletedAt);
@@ -103,109 +123,147 @@ export function ConversationView({ conversation: c, me }: { conversation: Sideba
   const canPost = detail.data ? detail.data.isMember : true;
 
   return (
-    <>
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-rule px-4">
-        <Link
-          to="/"
-          aria-label="Back to conversations"
-          className="-ml-1 rounded-lg p-1 text-muted hover:text-ink md:hidden"
-        >
-          <ArrowLeft aria-hidden className="size-5" />
-        </Link>
-        {c.kind === 'private' ? (
-          <Lock aria-hidden className="size-4 text-meta" />
-        ) : c.kind === 'public' ? (
-          <Hash aria-hidden className="size-4 text-meta" />
-        ) : null}
-        <h1 className="truncate text-[15px] font-semibold">{label}</h1>
-        {c.topic && <p className="hidden min-w-0 truncate text-sm text-meta sm:block">{c.topic}</p>}
-        {detail.data && (
-          <span className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-meta" title="Members">
-            <Users aria-hidden className="size-4" />
-            <span className="sr-only">Members:</span>
-            {detail.data.members.length}
-          </span>
+    <div className="flex min-h-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex h-14 shrink-0 items-center gap-3 border-b border-rule px-4">
+          <Link
+            to="/"
+            aria-label="Back to conversations"
+            className="-ml-1 rounded-lg p-1 text-muted hover:text-ink md:hidden"
+          >
+            <ArrowLeft aria-hidden className="size-5" />
+          </Link>
+          {c.kind === 'private' ? (
+            <Lock aria-hidden className="size-4 text-meta" />
+          ) : c.kind === 'public' ? (
+            <Hash aria-hidden className="size-4 text-meta" />
+          ) : null}
+          <h1 className="truncate text-[15px] font-semibold">{label}</h1>
+          {c.topic && <p className="hidden min-w-0 truncate text-sm text-meta sm:block">{c.topic}</p>}
+          {detail.data && (
+            <span className="ml-auto flex shrink-0 items-center gap-1.5 text-sm text-meta" title="Members">
+              <Users aria-hidden className="size-4" />
+              <span className="sr-only">Members:</span>
+              {detail.data.members.length}
+            </span>
+          )}
+        </header>
+
+        {detail.data && detail.data.guestCount > 0 && (
+          <p className="border-b border-rule bg-raised px-5 py-2 text-[13px] text-muted">
+            {detail.data.guestCount === 1
+              ? 'A guest from outside your team is'
+              : `${detail.data.guestCount} guests from outside your team are`}{' '}
+            in this conversation.
+          </p>
         )}
-      </header>
 
-      {detail.data && detail.data.guestCount > 0 && (
-        <p className="border-b border-rule bg-raised px-5 py-2 text-[13px] text-muted">
-          {detail.data.guestCount === 1
-            ? 'A guest from outside your team is'
-            : `${detail.data.guestCount} guests from outside your team are`}{' '}
-          in this conversation.
-        </p>
-      )}
-
-      {feed.isPending ? (
-        <div className="flex-1" role="status" aria-label="Loading messages" />
-      ) : feed.isError ? (
-        <div className="grid flex-1 place-items-center text-center">
-          <div>
-            <p className="text-[15px] text-muted">Messages didn’t load.</p>
-            <Button variant="ghost" className="mt-3" onClick={() => void feed.refetch()}>
-              Try again
-            </Button>
+        {feed.isPending ? (
+          <div className="flex-1" role="status" aria-label="Loading messages" />
+        ) : feed.isError ? (
+          <div className="grid flex-1 place-items-center text-center">
+            <div>
+              <p className="text-[15px] text-muted">Messages didn’t load.</p>
+              <Button variant="ghost" className="mt-3" onClick={() => void feed.refetch()}>
+                Try again
+              </Button>
+            </div>
           </div>
+        ) : (
+          <MessageList
+            messages={messages}
+            hasMore={feed.data.hasMore}
+            loadingOlder={loadingOlder}
+            loadOlder={loadOlder}
+            firstUnreadSeq={firstUnreadSeq}
+            myId={myId}
+            isAdmin={isAdmin}
+            editingId={editingId}
+            setEditingId={setEditingId}
+            nameOf={nameOf}
+            isAppMessage={(m) => Boolean(m.webhookId)}
+            actions={actions}
+            onAtBottomChange={setAtBottom}
+            intro={
+              <Intro
+                conversation={c}
+                label={label}
+                members={detail.data?.members ?? []}
+                myId={myId}
+                isChannel={isChannel}
+              />
+            }
+          />
+        )}
+
+        <div className="min-h-6 px-5 text-xs text-meta" aria-live="polite">
+          {connection === 'closed' ? (
+            <span className="text-attention">Reconnecting… your messages will still send.</span>
+          ) : error ? (
+            <span role="alert" className="text-attention">
+              {error}
+            </span>
+          ) : typingNames.length ? (
+            <span>
+              {typingNames.length > 2
+                ? 'Several people are typing…'
+                : `${typingNames.join(' and ')} ${typingNames.length > 1 ? 'are' : 'is'} typing…`}
+            </span>
+          ) : null}
         </div>
-      ) : (
-        <MessageList
-          messages={messages}
-          hasMore={feed.data.hasMore}
-          loadingOlder={loadingOlder}
-          loadOlder={loadOlder}
-          firstUnreadSeq={firstUnreadSeq}
+
+        {canPost ? (
+          <Composer
+            conversationId={c.id}
+            placeholder={isChannel ? `Message #${label}` : `Message ${label}`}
+            mentionables={mentionables}
+            autoFocus={!threadId}
+            onSend={({ body, files }) => {
+              setError(null);
+              send({ body, files }).catch(() => undefined);
+            }}
+            onTyping={sendTyping}
+            onEditLast={editLast}
+          />
+        ) : (
+          <JoinBar conversationId={c.id} label={label} />
+        )}
+      </div>
+      {threadId && (
+        <ThreadPanel
+          key={threadId}
+          conversationId={c.id}
+          parentId={threadId}
+          channelLabel={isChannel ? `#${label}` : null}
           myId={myId}
           isAdmin={isAdmin}
-          editingId={editingId}
-          setEditingId={setEditingId}
           nameOf={nameOf}
-          isAppMessage={(m) => Boolean(m.webhookId)}
           actions={actions}
-          onAtBottomChange={setAtBottom}
-          intro={
-            <Intro
-              conversation={c}
-              label={label}
-              members={detail.data?.members ?? []}
-              myId={myId}
-              isChannel={isChannel}
-            />
-          }
-        />
-      )}
-
-      <div className="min-h-6 px-5 text-xs text-meta" aria-live="polite">
-        {connection === 'closed' ? (
-          <span className="text-attention">Reconnecting… your messages will still send.</span>
-        ) : error ? (
-          <span role="alert" className="text-attention">
-            {error}
-          </span>
-        ) : typingNames.length ? (
-          <span>
-            {typingNames.length > 2
-              ? 'Several people are typing…'
-              : `${typingNames.join(' and ')} ${typingNames.length > 1 ? 'are' : 'is'} typing…`}
-          </span>
-        ) : null}
-      </div>
-
-      {canPost ? (
-        <Composer
-          conversationId={c.id}
-          placeholder={isChannel ? `Message #${label}` : `Message ${label}`}
-          onSend={(text) => {
-            setError(null);
-            send(text).catch(() => undefined);
-          }}
+          mentionables={mentionables}
           onTyping={sendTyping}
-          onEditLast={editLast}
         />
-      ) : (
-        <JoinBar conversationId={c.id} label={label} />
       )}
-    </>
+    </div>
+  );
+}
+
+/** Changes one message wherever it's shown: the conversation and any open thread. */
+function patchMessage(
+  client: QueryClient,
+  conversationId: string,
+  id: string,
+  change: (m: FeedMessage) => FeedMessage,
+) {
+  client.setQueryData<Feed>(feedKey(conversationId), (f) =>
+    f ? { ...f, messages: f.messages.map((x) => (x.id === id ? change(x) : x)) } : f,
+  );
+  client.setQueriesData<Thread>({ queryKey: ['thread', conversationId] }, (t) =>
+    t
+      ? {
+          parent: t.parent.id === id ? change(t.parent) : t.parent,
+          replies: t.replies.map((x) => (x.id === id ? change(x) : x)),
+        }
+      : t,
   );
 }
 

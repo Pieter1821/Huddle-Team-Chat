@@ -4,12 +4,14 @@ import type { ConversationEvent, MessageDto } from '../src/shared/events';
 import { parseInline, parseMessage, plainText, toMessageText } from '../src/web/features/chat/format';
 import {
   addPending,
+  applyToThread,
   applyEvent,
   applyEvents,
   markPending,
   prependOlder,
   upsertConfirmed,
   type Feed,
+  type Thread,
 } from '../src/web/features/chat/feed-state';
 
 const USER = '01J0000000000000000000000A';
@@ -218,5 +220,59 @@ describe('live conversation feed', () => {
     expect(
       prependOlder(feed(3, [msg(2), msg(3)]), [msg(1), msg(2)], false).messages.map((m) => m.seq),
     ).toEqual([1, 2, 3]);
+  });
+});
+
+describe('threads', () => {
+  const parent = msg(1, { id: 'p' });
+  const reply = (seq: number, extra: Partial<MessageDto> = {}) => msg(seq, { parentId: 'p', ...extra });
+
+  it('adds replies once, in order, and ignores other threads', () => {
+    let t: Thread = { parent, replies: [] };
+    for (const e of [
+      created(reply(3)),
+      created(reply(2)),
+      created(reply(3)),
+      created(msg(4, { parentId: 'other' })),
+    ]) {
+      t = applyToThread(t, e);
+    }
+    expect(t.replies.map((r) => r.seq)).toEqual([2, 3]);
+  });
+
+  it('swaps a sending reply for the server copy and drops deleted replies', () => {
+    let t: Thread = {
+      parent,
+      replies: [{ ...reply(0, { id: 'tmp', clientMsgId: 'r1234567' }), pending: 'sending' }],
+    };
+    t = applyToThread(t, created(reply(2, { clientMsgId: 'r1234567' })));
+    expect(t.replies.map((r) => [r.id, r.pending])).toEqual([['m2', undefined]]);
+    t = applyToThread(t, {
+      type: 'message.deleted',
+      conversationId: 'c1',
+      seq: 3,
+      at: '',
+      data: { messageId: 'm2', parentId: 'p', deletedAt: 'now' },
+    });
+    expect(t.replies).toEqual([]);
+  });
+
+  it('updates the parent on edits and reactions', () => {
+    let t: Thread = { parent, replies: [] };
+    t = applyToThread(t, {
+      type: 'message.edited',
+      conversationId: 'c1',
+      seq: 2,
+      at: '',
+      data: { messageId: 'p', body: 'new', editedAt: 'now' },
+    });
+    t = applyToThread(t, {
+      type: 'reaction.added',
+      conversationId: 'c1',
+      seq: 3,
+      at: '',
+      data: { messageId: 'p', userId: 'u2', emoji: '👀' },
+    });
+    expect(t.parent).toMatchObject({ body: 'new', reactions: [{ emoji: '👀', count: 1, userIds: ['u2'] }] });
   });
 });

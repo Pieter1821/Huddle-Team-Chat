@@ -10,14 +10,14 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [['github'], ['html', { open: 'never' }]] : 'list',
   use: {
-    baseURL: 'http://localhost:8787',
+    baseURL: 'http://localhost:8790',
     channel: process.env.CI ? undefined : 'chrome',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
   webServer: {
     command: 'node e2e/server.mjs',
-    url: 'http://localhost:8787/api/health',
+    url: 'http://localhost:8790/api/health',
     reuseExistingServer: false,
     timeout: 120_000,
   },
