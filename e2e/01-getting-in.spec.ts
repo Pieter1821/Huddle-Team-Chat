@@ -1,29 +1,8 @@
-import { readFileSync } from 'node:fs';
 import { expect, test, type Page } from '@playwright/test';
 
-const LOG_FILE = '.wrangler/e2e/server.log';
-const ADMIN_EMAIL = 'owner@e2e.test';
+import { ADMIN_EMAIL, codeFor, logSize } from './helpers';
+
 const MEMBER_EMAIL = 'sam@e2e.test';
-
-/** The newest sign-in code emailed to this address (printed to the server log in local dev). */
-async function codeFor(email: string, after: number): Promise<string> {
-  let code: string | undefined;
-  await expect
-    .poll(
-      () => {
-        const log = readFileSync(LOG_FILE, 'utf8').slice(after);
-        const blocks = log.split('[email] to: ').filter((b) => b.startsWith(email));
-        // The subject names the workspace once it exists ("… is your Acme Studio sign-in code").
-        code = /(\d{6}) is your .+ sign-in code/.exec(blocks.at(-1) ?? '')?.[1];
-        return code;
-      },
-      { message: `a sign-in code for ${email}` },
-    )
-    .toBeTruthy();
-  return code!;
-}
-
-const logSize = () => readFileSync(LOG_FILE, 'utf8').length;
 
 async function signInWithCode(page: Page, email: string) {
   const before = logSize();

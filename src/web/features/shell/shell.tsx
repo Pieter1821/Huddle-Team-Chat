@@ -1,15 +1,26 @@
-import { ArrowLeft, Hash, Lock } from 'lucide-react';
+import { lazy, Suspense } from 'react';
 import { Link, Route, Routes, useMatch, useParams } from 'react-router';
-import { conversationLabel, useConversations, useMe } from '@/lib/queries';
+import { ErrorBoundary } from '@/components/error-boundary';
+import { useConversations, useMe } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { Sidebar } from './sidebar';
+import { useWorkspaceLive } from './use-workspace-live';
+
+// The chat view carries the editor (Tiptap/ProseMirror), the heaviest code in the app: it loads
+// on first use, so sign-in and setup stay small.
+const ConversationView = lazy(() =>
+  import('@/features/chat/conversation-view').then((m) => ({ default: m.ConversationView })),
+);
 
 /**
  * The signed-in app: sidebar plus the open conversation. On a phone only one shows at a time:
  * the list at "/", the conversation at "/c/:id" (with a back link to the list).
  */
 export function Shell() {
-  const inConversation = Boolean(useMatch('/c/:id'));
+  const match = useMatch('/c/:id');
+  const inConversation = Boolean(match);
+  const { data: me } = useMe();
+  useWorkspaceLive(me?.user.id, match?.params.id);
   return (
     <div className="flex h-dvh">
       <Sidebar
@@ -39,14 +50,14 @@ function NothingOpen() {
   );
 }
 
-/** Header of the open conversation. The message list and composer arrive with the chat piece. */
+/** The conversation in the address bar, if you can see it. */
 function ConversationPane() {
   const { id } = useParams();
   const { data: me } = useMe();
   const { data: conversations, isPending } = useConversations();
   const c = conversations?.find((x) => x.id === id);
 
-  if (isPending) return null;
+  if (isPending || !me) return null;
   if (!c) {
     return (
       <div className="grid flex-1 place-items-center px-6 text-center">
@@ -62,22 +73,12 @@ function ConversationPane() {
       </div>
     );
   }
-  const Icon = c.kind === 'private' ? Lock : c.kind === 'public' ? Hash : null;
+  // Keyed by id: switching conversations starts fresh (scroll position, "New" marker, editing).
   return (
-    <>
-      <header className="flex h-14 shrink-0 items-center gap-3 border-b border-rule px-4">
-        <Link
-          to="/"
-          aria-label="Back to conversations"
-          className="-ml-1 rounded-lg p-1 text-muted hover:text-ink md:hidden"
-        >
-          <ArrowLeft aria-hidden className="size-5" />
-        </Link>
-        {Icon && <Icon aria-hidden className="size-4 text-meta" />}
-        <h1 className="truncate text-[15px] font-semibold">{conversationLabel(c, me?.user.id)}</h1>
-        {c.topic && <p className="hidden truncate text-sm text-meta sm:block">{c.topic}</p>}
-      </header>
-      <div className="flex-1" />
-    </>
+    <ErrorBoundary resetKey={c.id} label="This conversation couldn’t be shown.">
+      <Suspense fallback={null}>
+        <ConversationView key={c.id} conversation={c} me={me} />
+      </Suspense>
+    </ErrorBoundary>
   );
 }

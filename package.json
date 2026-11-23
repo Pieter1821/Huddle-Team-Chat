@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "predev": "wrangler d1 migrations apply DB --local --force",
     "dev": "vite",
     "types": "wrangler types",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.web.json",
@@ -25,6 +26,10 @@
   "dependencies": {
     "@hono/zod-validator": "^0.9.1",
     "@tanstack/react-query": "^5.108.2",
+    "@tiptap/extensions": "^3.35.0",
+    "@tiptap/pm": "^3.35.0",
+    "@tiptap/react": "^3.35.0",
+    "@tiptap/starter-kit": "^3.35.0",
     "better-auth": "^1.7.27",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
