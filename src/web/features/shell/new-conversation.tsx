@@ -183,7 +183,7 @@ export function BrowseChannelsDialog({
           Create a channel
         </Button>
       </div>
-      <ul className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-4">
+      <ul className="mt-3 min-h-0 flex-1 relative overflow-y-auto px-3 pb-4">
         {channels.isPending && <li className="px-3 py-6 text-center text-sm text-meta">Loading…</li>}
         {channels.data && !shown.length && (
           <li className="px-3 py-6 text-center text-sm text-meta">No channels match.</li>
@@ -275,7 +275,7 @@ export function NewMessageDialog({ open, onOpenChange }: DialogProps) {
           onChange={(e) => setFilter(e.target.value)}
         />
       </div>
-      <ul aria-label="People" className="mt-3 min-h-0 flex-1 overflow-y-auto px-3">
+      <ul aria-label="People" className="mt-3 min-h-0 flex-1 relative overflow-y-auto px-3">
         {people.map((p) => {
           const on = picked.includes(p.userId);
           return (

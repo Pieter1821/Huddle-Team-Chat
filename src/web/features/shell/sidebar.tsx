@@ -64,7 +64,7 @@ export function Sidebar({ className }: { className?: string }) {
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-4">
+      <div className="min-h-0 flex-1 relative overflow-y-auto px-2 py-4">
         {conversations.isPending ? (
           <SkeletonList />
         ) : conversations.error ? (

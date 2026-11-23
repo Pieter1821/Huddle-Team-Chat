@@ -47,7 +47,11 @@ export function SignInPage() {
   if (!email.data) return <AuthLayout title={`Sign in to ${branding?.name ?? 'Huddle'}`}>{null}</AuthLayout>;
 
   const { ready, needsSetup } = email.data;
-  const current = mode ?? (needsSetup ? (ready ? 'email' : 'owner') : ready ? 'email' : 'app');
+  // Owner recovery (lost phone) has no visible link: the owner opens /signin?owner=recover, which
+  // still needs the setup key.
+  const recovering = params.get('owner') === 'recover';
+  const current =
+    mode ?? (recovering ? 'owner' : needsSetup ? (ready ? 'email' : 'owner') : ready ? 'email' : 'app');
   const switcher = (to: 'email' | 'app' | 'owner', label: string) => (
     <button
       type="button"
@@ -87,7 +91,6 @@ export function SignInPage() {
         {current === 'email'
           ? switcher('app', 'Use an authenticator app instead')
           : ready && switcher('email', 'Email me a code instead')}
-        {current === 'app' && switcher('owner', 'Owner: set up the app again with the setup key')}
       </div>
     </AuthLayout>
   );

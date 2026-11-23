@@ -171,7 +171,8 @@ export function Composer({
           'aria-label': placeholder,
           'aria-multiline': 'true',
           role: 'textbox',
-          class: 'max-h-60 min-h-[44px] overflow-y-auto px-4 py-3 text-[15px] leading-relaxed outline-none',
+          class:
+            'max-h-60 min-h-[44px] relative overflow-y-auto px-4 py-3 text-[15px] leading-relaxed outline-none',
         },
         handlePaste: (_view, event) => {
           const files = [...(event.clipboardData?.files ?? [])];

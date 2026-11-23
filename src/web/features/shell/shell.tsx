@@ -37,7 +37,9 @@ export function Shell() {
   }, [navigate]);
   useDocumentTitle(match?.params.id, onSettings ? 'Your settings' : onAdmin ? 'Admin' : null);
   return (
-    <div className="flex h-dvh">
+    // The app never scrolls as a whole: each panel scrolls itself. overflow-hidden also stops any
+    // hidden (screen-reader-only) text placed by the browser below a panel from stretching the page.
+    <div className="relative flex h-dvh overflow-hidden">
       {/* The first thing Tab reaches: past the sidebar, straight to what's open. */}
       <a
         href="#main"

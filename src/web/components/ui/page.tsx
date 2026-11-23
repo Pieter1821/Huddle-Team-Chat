@@ -26,7 +26,7 @@ export function Page({
         <h1 className="truncate text-[15px] font-semibold">{title}</h1>
         {actions && <div className="ml-auto">{actions}</div>}
       </header>
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 relative overflow-y-auto">
         <div className="mx-auto w-full max-w-3xl space-y-6 px-4 py-6 sm:px-6">{children}</div>
       </div>
     </div>
