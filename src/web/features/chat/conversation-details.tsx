@@ -239,7 +239,7 @@ function Members({
                       onChange={() =>
                         setPicked((p) => (on ? p.filter((x) => x !== m.userId) : [...p, m.userId]))
                       }
-                      className="size-4 accent-[var(--color-action)]"
+                      className="m-0.5 size-5 shrink-0 accent-[var(--color-action)]"
                     />
                     <span className="text-sm">{m.name}</span>
                     {m.role === 'guest' && <span className="text-xs text-meta">Guest</span>}

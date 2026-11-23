@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { vi, beforeEach, describe, expect, it } from 'vitest';
 import { env } from 'cloudflare:workers';
 import { addMember, api, resetDb, setupWorkspace } from './helpers';
 
@@ -298,6 +298,15 @@ describe('outbox recovery', () => {
     const { owner } = await team();
     const ch = await createChannel(owner.cookie, 'outbox', 'public');
     await post(owner.cookie, ch, 'saved but the room crashed before broadcasting');
+    // The room marks events published just after replying; wait for that, then undo it.
+    await vi.waitFor(async () => {
+      const row = await env.DB.prepare(
+        'SELECT count(*) AS n FROM conversation_event WHERE conversation_id = ? AND published_at IS NULL',
+      )
+        .bind(ch)
+        .first<{ n: number }>();
+      expect(row?.n).toBe(0);
+    });
     await env.DB.prepare('UPDATE conversation_event SET published_at = NULL WHERE conversation_id = ?')
       .bind(ch)
       .run();

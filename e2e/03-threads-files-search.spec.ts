@@ -7,7 +7,7 @@ const PNG = Buffer.from(
   'base64',
 );
 
-const log = (page: Page) => page.getByRole('log', { name: 'Messages' });
+const log = (page: Page) => page.getByRole('region', { name: 'Messages' });
 const nav = (page: Page) => page.getByRole('navigation', { name: 'Conversations' });
 
 test('channels, threads with mentions, files, search and direct messages', async ({ browser }) => {

@@ -12,6 +12,8 @@ export default tseslint.config(
       'design',
       'migrations',
       'worker-configuration.d.ts',
+      'playwright-report',
+      'test-results',
     ],
   },
   js.configs.recommended,
@@ -35,6 +37,22 @@ export default tseslint.config(
     // React's rules of hooks for the web app (hooks only at the top level, complete dependencies).
     files: ['src/web/**/*.{ts,tsx}'],
     ...reactHooks.configs.flat.recommended,
+  },
+  {
+    // The many-people test is a plain Node script (Node's own fetch, WebSocket and timers).
+    files: ['e2e/scale/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        fetch: 'readonly',
+        WebSocket: 'readonly',
+        performance: 'readonly',
+        setTimeout: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        document: 'readonly',
+      },
+    },
   },
   {
     // Tests poke at raw JSON responses; their assertions catch wrong shapes. App code stays strict.

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react';
+import { memo, useEffect, useRef, useState, type KeyboardEvent } from 'react';
 import { AlertDialog } from 'radix-ui';
 import { FileText, MessageSquare, Pencil, SmilePlus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,11 @@ const time = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-di
 const full = new Intl.DateTimeFormat(undefined, { dateStyle: 'full', timeStyle: 'short' });
 
 /** One message: author line (unless grouped with the one before), text, reactions and actions. */
-export function MessageItem({
+/**
+ * Memoised: a long history re-renders only the messages that changed, not all of them, when one
+ * message arrives or changes. Every prop passed in must therefore be stable between renders.
+ */
+export const MessageItem = memo(function MessageItem({
   message: m,
   authorName,
   isApp,
@@ -30,7 +34,7 @@ export function MessageItem({
   myId,
   canDelete,
   editing,
-  onEditingChange,
+  setEditingId,
   nameOf,
   actions,
 }: {
@@ -41,10 +45,11 @@ export function MessageItem({
   myId: string;
   canDelete: boolean;
   editing: boolean;
-  onEditingChange: (editing: boolean) => void;
+  setEditingId: (id: string | null) => void;
   nameOf: (userId: string) => string;
   actions: MessageActions;
 }) {
+  const onEditingChange = (on: boolean) => setEditingId(on ? m.id : null);
   const mine = m.authorId === myId;
   const created = new Date(m.createdAt);
 
@@ -57,8 +62,9 @@ export function MessageItem({
   return (
     <article
       aria-label={`${authorName}, ${full.format(created)}`}
-      // Focusable so touch and keyboard users can reach the actions that appear on hover.
-      tabIndex={0}
+      // Focusable so touch and keyboard users can reach the actions that appear on hover. One
+      // message in a list is the tab stop at a time (see useRovingMessages).
+      tabIndex={-1}
       className={cn(
         'group relative flex gap-3 px-5 transition-colors duration-100 outline-none hover:bg-raised/60 focus-within:bg-raised/60 focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-action',
         grouped ? 'py-0.5' : 'pt-3 pb-0.5',
@@ -195,7 +201,7 @@ export function MessageItem({
       )}
     </article>
   );
-}
+});
 
 /** Hover (or keyboard focus) actions in the top-right corner of a message. */
 function Toolbar({

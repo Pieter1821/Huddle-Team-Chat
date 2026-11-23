@@ -154,22 +154,18 @@ function Section({
 function ConversationLink({ conversation: c, label }: { conversation: SidebarConversation; label: string }) {
   const unread = c.unread > 0 && c.notifyLevel !== 'muted';
   const Icon = c.kind === 'private' ? Lock : c.kind === 'public' ? Hash : null;
-  const announce = [
-    label,
-    c.mentions ? `${c.mentions} mention${c.mentions === 1 ? '' : 's'}` : unread ? 'unread' : '',
-  ]
-    .filter(Boolean)
-    .join(', ');
+  // Heard after the name (the visible name stays the start of the link's name, so voice control
+  // users can say what they see).
+  const status = c.mentions ? `${c.mentions} mention${c.mentions === 1 ? '' : 's'}` : unread ? 'unread' : '';
   return (
     <NavLink
       to={`/c/${c.id}`}
-      aria-label={announce}
       className={({ isActive }) =>
         cn(
           'flex h-9 items-center gap-2.5 rounded-lg px-3 text-[15px] transition-colors duration-150',
           isActive ? 'bg-active text-ink' : 'text-muted hover:bg-active/60 hover:text-ink',
           unread && 'font-semibold text-ink',
-          c.notifyLevel === 'muted' && 'opacity-60',
+          c.notifyLevel === 'muted' && 'text-meta', // quieter, still 4.5:1
         )
       }
     >
@@ -184,6 +180,7 @@ function ConversationLink({ conversation: c, label }: { conversation: SidebarCon
         </span>
       )}
       <span className="truncate">{label}</span>
+      {status && <span className="sr-only">({status})</span>}
       {c.mentions > 0 && (
         <span
           aria-hidden
