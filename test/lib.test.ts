@@ -14,6 +14,8 @@ const baseEnv = {
   GOOGLE_CLIENT_ID: '',
   GMAIL_CLIENT_ID: '',
   GMAIL_CLIENT_SECRET: '',
+  GMAIL_ADDRESS: '',
+  GMAIL_APP_PASSWORD: '',
   GOOGLE_CLIENT_SECRET: '',
 } as unknown as Env;
 
@@ -83,7 +85,7 @@ describe('sendEmail with no delivery method configured', () => {
   const email = { to: 'a@b.c', subject: 's', text: 'Your code is 123456', html: 'h' };
 
   it('reports that email is not configured', async () => {
-    expect(await emailDeliveryConfigured(getDb(env))).toBe(false);
+    expect(await emailDeliveryConfigured(getDb(env), getConfig(baseEnv))).toBe(false);
   });
 
   it('refuses in production rather than printing sign-in codes into logs', async () => {

@@ -2,6 +2,7 @@ import { sql } from 'drizzle-orm';
 import type { Config } from '../config';
 import type { Db } from '../db/client';
 import { getAccount, sendWithGmail } from '../modules/email/gmail';
+import { sendWithAppPassword } from '../modules/email/smtp';
 import { AppError } from './errors';
 
 export type Email = {
@@ -29,9 +30,9 @@ export function useEmailTransport(next: EmailTransport | null): void {
   transport = next;
 }
 
-/** Whether emails really leave the Worker: Gmail is connected and working (false locally without it). */
-export async function emailDeliveryConfigured(db: Db): Promise<boolean> {
-  if (transport) return true;
+/** Whether emails really leave the Worker: Gmail is set up and working (false locally without it). */
+export async function emailDeliveryConfigured(db: Db, config: Config): Promise<boolean> {
+  if (transport || config.gmailAppPassword) return true;
   const account = await getAccount(db);
   return Boolean(account && !account.needsReconnectAt);
 }
@@ -75,6 +76,11 @@ async function deliver(
 ): Promise<void> {
   if (transport) {
     await transport({ ...email, from: config.emailFrom }, { idempotencyKey });
+    return;
+  }
+  // An app password, when set, is used first: it needs no connection step.
+  if (config.gmailAppPassword) {
+    await sendWithAppPassword(config, email);
     return;
   }
   const account = db ? await getAccount(db) : null;

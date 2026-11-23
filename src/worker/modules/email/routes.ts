@@ -18,8 +18,9 @@ const STATE_PATH = '/api/email/google';
 const isSetUp = async (c: Context<AppEnv>) =>
   Boolean(await c.var.db.query.workspace.findFirst({ columns: { id: true } }));
 
-/** Email works right now: Gmail is connected and Google still accepts it. */
+/** Email works right now: an app password is set, or Gmail is connected and Google still accepts it. */
 const emailWorks = async (c: Context<AppEnv>) => {
+  if (c.var.config.gmailAppPassword) return true;
   const account = await getAccount(c.var.db);
   return Boolean(account && !account.needsReconnectAt);
 };
@@ -48,8 +49,14 @@ export const emailRoutes = new Hono<AppEnv>()
     const { db, config } = c.var;
     const account = await getAccount(db);
     return c.json({
-      ready: (await emailDeliveryConfigured(db)) || config.isLocal,
-      gmail: account ? (account.needsReconnectAt ? 'needs-reconnect' : 'connected') : 'not-connected',
+      ready: (await emailDeliveryConfigured(db, config)) || config.isLocal,
+      gmail: config.gmailAppPassword
+        ? 'app-password'
+        : account
+          ? account.needsReconnectAt
+            ? 'needs-reconnect'
+            : 'connected'
+          : 'not-connected',
       canConnect: Boolean(config.gmail),
       needsSetup: !(await isSetUp(c)),
     });
@@ -134,6 +141,7 @@ export const emailAdminRoutes = new Hono<AppEnv>()
             needsReconnect: Boolean(account.needsReconnectAt),
           }
         : null,
+      appPassword: config.gmailAppPassword ? { address: config.gmailAppPassword.address } : null,
       canConnect: Boolean(config.gmail),
       redirectUri: redirectUri(config),
       local: config.isLocal,
@@ -141,9 +149,9 @@ export const emailAdminRoutes = new Hono<AppEnv>()
   })
   .post('/test', async (c) => {
     const { db, config, actor } = c.var;
-    if (!(await getAccount(db))) throw new AppError(400, 'gmail_not_connected', 'Connect Gmail first.');
-    const account = (await getAccount(db))!;
-    await sendEmail(config, testEmail(actor.email, await emailBrand(db, config), account.address), { db });
+    const from = config.gmailAppPassword?.address ?? (await getAccount(db))?.address;
+    if (!from) throw new AppError(400, 'gmail_not_connected', 'Set up Gmail first.');
+    await sendEmail(config, testEmail(actor.email, await emailBrand(db, config), from), { db });
     return c.json({ sentTo: actor.email });
   })
   .post('/disconnect', async (c) => {
