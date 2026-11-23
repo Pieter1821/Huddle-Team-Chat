@@ -113,6 +113,13 @@ type BatchItem = Parameters<Db['batch']>[0][number];
 /** Drizzle's batch() takes a non-empty tuple; every list built here ends with a required statement. */
 const nonEmpty = (items: BatchItem[]) => items as [BatchItem, ...BatchItem[]];
 
+/**
+ * The id an imported message keeps, so importing again skips it. Slack timestamps are only unique
+ * within one channel, so the channel is part of it: the same person posting in two channels in the
+ * same instant must not collide.
+ */
+export const importedId = (channelSlackId: string, ts: string) => `slack-${channelSlackId}-${ts}`;
+
 const slackId = z.string().regex(/^[A-Z0-9]{2,30}$/, 'Not a Slack id.');
 const ts = z.string().regex(/^\d{9,11}\.\d{1,6}$/, 'Not a Slack timestamp.');
 
@@ -280,6 +287,42 @@ export const importRoutes = new Hono<AppEnv>()
         const isDm = ch.kind === 'dm' || ch.kind === 'group_dm';
         if (isDm && !memberIds.length)
           throw badRequest('unknown_members', 'Import the people in this DM first.');
+
+        // Imported before, in an earlier import of this (or a newer) export: reuse that channel, so
+        // importing again only adds what's new instead of making "name-imported" copies.
+        if (!isDm) {
+          const [earlier] = await db
+            .select({ conversationId: importConversationMap.conversationId })
+            .from(importConversationMap)
+            .innerJoin(conversation, eq(conversation.id, importConversationMap.conversationId))
+            .where(
+              and(
+                eq(importConversationMap.slackId, ch.slackId),
+                eq(conversation.workspaceId, actor.workspaceId),
+              ),
+            )
+            .limit(1);
+          if (earlier) {
+            await db.batch(
+              nonEmpty([
+                // People who joined the Slack channel since the earlier export.
+                ...memberIds.map((userId) =>
+                  db
+                    .insert(conversationMember)
+                    .values({ conversationId: earlier.conversationId, userId })
+                    .onConflictDoNothing(),
+                ),
+                db.insert(importConversationMap).values({
+                  sessionId: session.id,
+                  slackId: ch.slackId,
+                  conversationId: earlier.conversationId,
+                }),
+              ]),
+            );
+            result.push({ slackId: ch.slackId, conversationId: earlier.conversationId, name: null });
+            continue;
+          }
+        }
         const dmKey = isDm ? [...memberIds].sort().join(':') : null;
         const existingDm = dmKey
           ? await db.query.conversation.findFirst({
@@ -381,12 +424,13 @@ export const importRoutes = new Hono<AppEnv>()
 
       const messages: ImportedMessage[] = wanted
         .map((m) => ({
-          clientMsgId: `slack-${m.ts}`,
+          clientMsgId: importedId(body.channelSlackId, m.ts),
           // Messages from people or bots that were not imported are attributed to the importer.
           authorId: (m.user && users.get(m.user)) || fallbackAuthor,
           body: convertSlackText(m.text, users, new Map()),
           createdAt: Math.round(Number(m.ts) * 1000),
-          parentClientMsgId: m.threadTs && m.threadTs !== m.ts ? `slack-${m.threadTs}` : null,
+          parentClientMsgId:
+            m.threadTs && m.threadTs !== m.ts ? importedId(body.channelSlackId, m.threadTs) : null,
           reactions: (m.reactions ?? [])
             .map((r) => ({
               emoji: emojiFromShortcode(r.name),
@@ -442,7 +486,7 @@ export const importRoutes = new Hono<AppEnv>()
       const msg = await db.query.message.findFirst({
         where: and(
           eq(message.conversationId, mapped.conversationId),
-          eq(message.clientMsgId, `slack-${body.ts}`),
+          eq(message.clientMsgId, importedId(body.channelSlackId, body.ts)),
         ),
       });
       if (!msg) throw badRequest('unknown_message', 'Import the message before its files.');

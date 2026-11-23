@@ -3,6 +3,8 @@ import { Page } from '@/components/ui/page';
 import { useMe } from '@/lib/queries';
 import { cn } from '@/lib/utils';
 import { AuditTab } from './audit-tab';
+import { ExportTab } from './export-tab';
+import { ImportTab } from './import-tab';
 import { PeopleTab } from './people-tab';
 import { UsageTab } from './usage-tab';
 import { WebhooksTab } from './webhooks-tab';
@@ -14,6 +16,8 @@ const TABS = [
   { path: 'webhooks', label: 'Webhooks' },
   { path: 'security', label: 'Security log' },
   { path: 'usage', label: 'Usage' },
+  { path: 'import', label: 'Import' },
+  { path: 'export', label: 'Export' },
 ];
 
 /** Workspace administration, for owners and admins (the server enforces this on every call too). */
@@ -51,6 +55,8 @@ export function AdminPage() {
         <Route path="webhooks" element={<WebhooksTab />} />
         <Route path="security" element={<AuditTab />} />
         <Route path="usage" element={<UsageTab />} />
+        <Route path="import" element={<ImportTab isOwner={me.role === 'owner'} />} />
+        <Route path="export" element={<ExportTab isOwner={me.role === 'owner'} />} />
         <Route path="*" element={<Navigate to="/admin/people" replace />} />
       </Routes>
     </Page>
