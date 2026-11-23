@@ -39,6 +39,22 @@ export default tseslint.config(
     ...reactHooks.configs.flat.recommended,
   },
   {
+    // The many-people test is a plain Node script (Node's own fetch, WebSocket and timers).
+    files: ['e2e/scale/**/*.mjs'],
+    languageOptions: {
+      globals: {
+        fetch: 'readonly',
+        WebSocket: 'readonly',
+        performance: 'readonly',
+        setTimeout: 'readonly',
+        process: 'readonly',
+        console: 'readonly',
+        Buffer: 'readonly',
+        document: 'readonly',
+      },
+    },
+  },
+  {
     // Tests poke at raw JSON responses; their assertions catch wrong shapes. App code stays strict.
     files: ['test/**/*.ts'],
     rules: {
