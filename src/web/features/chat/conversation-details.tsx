@@ -35,7 +35,7 @@ export function ConversationDetails({
   const isAdmin = me.role === 'owner' || me.role === 'admin';
   return (
     <Dialog open={open} onOpenChange={onOpenChange} title={isChannel ? `#${label}` : label} top>
-      <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 pt-4 pb-6">
+      <div className="min-h-0 flex-1 space-y-6 relative overflow-y-auto px-6 pt-4 pb-6">
         {isChannel && <About conversation={c} />}
         {detail?.isMember && <Notifications conversation={c} />}
         <Members conversation={c} detail={detail} me={me} isChannel={isChannel} isAdmin={isAdmin} />
@@ -227,7 +227,7 @@ function Members({
 
       {adding && (
         <div className="mt-3 rounded-lg bg-ground p-3 edge">
-          <ul aria-label="People to add" className="max-h-48 overflow-y-auto">
+          <ul aria-label="People to add" className="max-h-48 relative overflow-y-auto">
             {candidates.map((m) => {
               const on = picked.includes(m.userId);
               return (

@@ -95,7 +95,7 @@ export function SearchDialog({
       </div>
 
       <div
-        className="mt-3 min-h-0 flex-1 overflow-y-auto px-3 pb-4"
+        className="mt-3 min-h-0 flex-1 relative overflow-y-auto px-3 pb-4"
         aria-live="polite"
         aria-busy={results.isFetching}
       >

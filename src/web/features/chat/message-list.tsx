@@ -143,7 +143,7 @@ export function MessageList({
 
   return (
     <div className="relative min-h-0 flex-1">
-      <div ref={scroller} onScroll={onScroll} className="h-full overflow-y-auto overscroll-contain">
+      <div ref={scroller} onScroll={onScroll} className="h-full relative overflow-y-auto overscroll-contain">
         <div ref={top} aria-hidden className="h-px" />
         {hasMore ? (
           <p className="py-4 text-center text-sm text-meta" role="status">

@@ -85,3 +85,17 @@ test('join from an invitation with only an authenticator app', async ({ browser 
   await expect(page.getByRole('heading', { name: 'What should people call you?' })).toBeVisible();
   await guest.close();
 });
+
+test('owner recovery is not offered on the sign-in page, only at its private address', async ({
+  browser,
+}) => {
+  const context = await browser.newContext({ baseURL: ORIGIN, storageState: { cookies: [], origins: [] } });
+  const page = await context.newPage();
+  await page.goto('/signin');
+  await page.getByRole('button', { name: 'Use an authenticator app instead' }).click();
+  await expect(page.getByLabel('Code from your authenticator app')).toBeVisible();
+  await expect(page.getByText(/setup key/i)).toHaveCount(0);
+  await page.goto('/signin?owner=recover');
+  await expect(page.getByLabel('Setup key')).toBeVisible();
+  await context.close();
+});

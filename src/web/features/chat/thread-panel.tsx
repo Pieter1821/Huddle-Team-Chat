@@ -90,7 +90,7 @@ export function ThreadPanel({
           </p>
         </div>
       ) : (
-        <div ref={scroller} className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-2">
+        <div ref={scroller} className="min-h-0 flex-1 relative overflow-y-auto overscroll-contain pb-2">
           <ThreadMessage
             m={thread.data.parent}
             {...{ myId, isAdmin, nameOf, actions, editingId, setEditingId }}
