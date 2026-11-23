@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api, type ApiError } from './api';
-import type { Branding, Me, SidebarConversation } from './types';
+import type { Branding, Me, Role, SidebarConversation } from './types';
 
 /** The team's look, readable before sign-in. Its accent drives the theme's action colour. */
 export function useBranding() {
@@ -53,4 +53,37 @@ export function conversationLabel(c: SidebarConversation, myId: string | undefin
   if (c.kind === 'public' || c.kind === 'private') return c.name ?? 'channel';
   const others = (c.members ?? []).filter((m) => m.userId !== myId).map((m) => m.name || 'Someone');
   return others.length ? others.join(', ') : 'Just you';
+}
+
+export type Member = { userId: string; name: string; image: string | null; role: Role; email?: string };
+
+/** Everyone you can see in the workspace, for names on messages and (later) mentions. */
+export function useMembers() {
+  const query = useQuery({
+    queryKey: ['members'],
+    queryFn: async () => (await api<{ members: Member[] }>('/members')).members,
+    staleTime: 5 * 60_000,
+  });
+  const byId = new Map((query.data ?? []).map((m) => [m.userId, m]));
+  return { ...query, byId };
+}
+
+export type ConversationDetail = {
+  conversation: {
+    id: string;
+    kind: SidebarConversation['kind'];
+    name: string | null;
+    topic: string | null;
+    archivedAt: string | null;
+  };
+  members: { userId: string; name: string; image: string | null; role: Role }[];
+  isMember: boolean;
+  guestCount: number;
+};
+
+export function useConversation(id: string) {
+  return useQuery({
+    queryKey: ['conversation', id],
+    queryFn: () => api<ConversationDetail>(`/conversations/${id}`),
+  });
 }
