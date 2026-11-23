@@ -5,6 +5,7 @@
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "predev": "wrangler d1 migrations apply DB --local --force",
     "dev": "vite",
     "types": "wrangler types",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.web.json",
