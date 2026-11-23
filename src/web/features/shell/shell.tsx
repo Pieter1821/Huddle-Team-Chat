@@ -1,6 +1,7 @@
-import { lazy, Suspense } from 'react';
-import { Link, Route, Routes, useMatch, useParams } from 'react-router';
+import { lazy, Suspense, useEffect } from 'react';
+import { Link, Route, Routes, useMatch, useNavigate, useParams } from 'react-router';
 import { ErrorBoundary } from '@/components/error-boundary';
+import { clearNotifications, onNotificationOpen } from '@/lib/pwa';
 import { useConversation, useConversations, useMe } from '@/lib/queries';
 import type { SidebarConversation } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -29,6 +30,11 @@ export function Shell() {
   const inConversation = Boolean(match || onSettings || onAdmin);
   const { data: me } = useMe();
   useWorkspaceLive(me?.user.id, match?.params.id);
+  const navigate = useNavigate();
+  useEffect(() => {
+    onNotificationOpen((url) => void navigate(url));
+    return () => onNotificationOpen(null);
+  }, [navigate]);
   return (
     <div className="flex h-dvh">
       <Sidebar
@@ -41,6 +47,8 @@ export function Shell() {
         <Routes>
           <Route path="/c/:id" element={<ConversationPane />} />
           <Route path="/c/:id/t/:threadId" element={<ConversationPane />} />
+          {/* Links from notification emails and pushes point at one message. */}
+          <Route path="/c/:id/m/:messageId" element={<ConversationPane />} />
           <Route
             path="/settings"
             element={
@@ -85,6 +93,7 @@ function ConversationPane() {
   const { data: conversations, isPending } = useConversations();
   const mine = conversations?.find((x) => x.id === id);
   const other = useConversation(id, !isPending && !mine);
+  useEffect(() => clearNotifications(id), [id]);
 
   const c: SidebarConversation | undefined =
     mine ??

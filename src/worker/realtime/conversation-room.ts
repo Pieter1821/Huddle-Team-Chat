@@ -14,6 +14,7 @@ import {
 } from '../db/schema';
 import { parseMentions } from '../../shared/mentions';
 import { toFileDto } from '../modules/files/dto';
+import type { PushJob } from '../modules/push/send';
 import { AppError, forbidden, notFound } from '../lib/errors';
 import { newId } from '../lib/id';
 import { hubFor } from './workspace-hub';
@@ -299,6 +300,19 @@ export class ConversationRoom extends DurableObject<Env> {
     ];
   }
 
+  /**
+   * Hands the instant pushes for a new message to the queue, after it is saved. Never holds up or
+   * fails the send itself: if queueing fails, the email digest still covers it.
+   */
+  private queuePush(messageId: string, userIds: string[]): void {
+    const job: PushJob = { type: 'push', messageId, userIds };
+    this.ctx.waitUntil(
+      this.env.NOTIFICATIONS.send(job).catch((err: unknown) => {
+        console.warn('push could not be queued', err instanceof Error ? err.message : err);
+      }),
+    );
+  }
+
   /** Sends to every socket connected to this conversation. */
   protected broadcast(payload: string): void {
     for (const ws of this.ctx.getWebSockets()) {
@@ -419,6 +433,7 @@ export class ConversationRoom extends DurableObject<Env> {
             ],
           };
         });
+        if (notify.size) this.queuePush(id, [...notify.keys()]);
         return { message: created, created: true };
       }),
     );

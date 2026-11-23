@@ -5,7 +5,7 @@ import { AppError } from './lib/errors';
 import { withServices, type AppEnv } from './middleware/context';
 import { requireSameOrigin } from './middleware/origin';
 import { queue, scheduled } from './jobs';
-import type { DigestJob } from './modules/notifications/digest';
+import type { NotificationJob } from './jobs';
 import {
   conversationNotificationRoutes,
   preferenceRoutes,
@@ -21,6 +21,7 @@ import { conversationWebhookRoutes, incomingHookRoutes, webhookRoutes } from './
 import { conversationRoutes } from './modules/conversations/routes';
 import { conversationFileRoutes, fileRoutes } from './modules/files/routes';
 import { realtimeRoutes } from './modules/realtime/routes';
+import { pushRoutes } from './modules/push/routes';
 import { searchRoutes } from './modules/search/routes';
 import { invitationRoutes } from './modules/invitations/routes';
 import { memberRoutes } from './modules/members/routes';
@@ -84,6 +85,7 @@ app.route('/files', fileRoutes);
 app.route('/search', searchRoutes);
 app.route('/realtime', realtimeRoutes);
 app.route('/activity', activityRoutes);
+app.route('/push', pushRoutes);
 
 app.notFound((c) => c.json({ error: { code: 'not_found', message: 'No such endpoint.' } }, 404));
 
@@ -107,4 +109,4 @@ export default {
   fetch: app.fetch,
   scheduled,
   queue,
-} satisfies ExportedHandler<Env, DigestJob>;
+} satisfies ExportedHandler<Env, NotificationJob>;

@@ -5,6 +5,10 @@ import { file, rateLimit, verification } from '../db/schema';
 import { AppError } from '../lib/errors';
 import { roomFor } from '../modules/conversations/service';
 import { scheduleDigests, sendDigest, type DigestJob } from '../modules/notifications/digest';
+import { sendPushJob, type PushJob } from '../modules/push/send';
+
+/** Everything on the notifications queue: hourly digest emails and instant pushes. */
+export type NotificationJob = DigestJob | PushJob;
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -69,15 +73,26 @@ export async function scheduled(_controller: ScheduledController, env: Env, ctx:
 }
 
 /**
- * Queue consumer: one digest per message. A failed send is retried (up to 3 times, then the job goes
- * to the dead-letter queue), so a mention is never silently dropped.
+ * Queue consumer. Digests: one per message; a failed send is retried (up to 3 times, then the job
+ * goes to the dead-letter queue), so a mention is never silently dropped. Pushes: best effort and
+ * never retried, since a retry could repeat a push on devices that already showed it.
  */
-export async function queue(batch: MessageBatch<DigestJob>, env: Env) {
+export async function queue(batch: MessageBatch<NotificationJob>, env: Env) {
   const db = getDb(env);
   const config = getConfig(env);
   for (const message of batch.messages) {
+    const job = message.body;
+    if ('type' in job) {
+      try {
+        await sendPushJob(db, config, job);
+      } catch (err) {
+        console.error('push job failed', err instanceof Error ? err.message : err);
+      }
+      message.ack();
+      continue;
+    }
     try {
-      const result = await sendDigest(db, config, message.body.userId);
+      const result = await sendDigest(db, config, job.userId);
       if (result === 'over_budget') {
         // Acknowledged on purpose: the notifications stay pending and tomorrow's run picks them up.
         console.warn('digest deferred: daily email budget used up');
