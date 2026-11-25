@@ -1,0 +1,74 @@
+---
+import '../styles/site.css';
+import '../styles/ui.css';
+import { DEPLOY_URL, REPO_URL } from '../lib/links';
+
+interface Props {
+  title: string;
+  description: string;
+  active?: 'home' | 'docs';
+  image?: string;
+}
+const { title, description, active = 'home', image = '/og.jpg' } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site);
+const ogImage = new URL(image, Astro.site);
+const year = new Date().getFullYear();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#151515" />
+    <link rel="icon" href="/brand/huddle-mark-32.png" sizes="32x32" />
+    <link rel="icon" href="/brand/huddle-mark-192.png" sizes="192x192" />
+    <link rel="apple-touch-icon" href="/brand/huddle-mark-180.png" />
+    <link rel="preload" href="/fonts/tasa-orbiter-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Huddle" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <script is:inline>document.documentElement.classList.add('js');</script>
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <header class="nav" data-nav>
+      <a class="brand" href="/" aria-label="Huddle home">
+        <img src="/brand/huddle-mark-64.png" alt="" width="28" height="28" />
+        <span>Huddle</span>
+      </a>
+      <nav class="nav-links" aria-label="Main">
+        <a class="wide" href="/#day">Walkthrough</a>
+        <a class="wide" href="/#uses">Uses</a>
+        <a class="wide" href="/#how">How it works</a>
+        <a href="/docs" aria-current={active === 'docs' ? 'page' : undefined}>Docs</a>
+        <a href={REPO_URL}>GitHub</a>
+        <a class="btn btn-sm" href={DEPLOY_URL} data-magnetic>Deploy free</a>
+      </nav>
+    </header>
+    <slot />
+    <footer class="foot">
+      <span>Free, open-source team chat.</span>
+      <nav aria-label="Footer">
+        <a href="/docs">Docs</a>
+        <a href={REPO_URL}>GitHub</a>
+        <a href={`${REPO_URL}/blob/main/LICENSE`}>MIT licence</a>
+        <a href="/docs/security">Security</a>
+      </nav>
+      <span class="end">© {year} Huddle contributors</span>
+    </footer>
+    <script>
+      import { initMotion } from '../scripts/motion';
+      initMotion();
+    </script>
+  </body>
+</html>

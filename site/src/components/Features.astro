@@ -1,0 +1,445 @@
+---
+/**
+ * Features: six filled cells, each a short text and a real piece of the interface docked to the
+ * opposite edge. Row one runs text-top, fragment-top, text-top; row two the reverse.
+ */
+import Icon from './Icon.astro';
+---
+
+<section class="features wrap" id="features" aria-labelledby="features-title">
+  <h2 id="features-title" class="h2" data-reveal><span>What your team gets</span></h2>
+  <div class="cells">
+    <!-- 1. Threads (text top) -->
+    <article class="cell top" data-reveal>
+      <div class="copy">
+        <h3>Threads</h3>
+        <p>Answer one message without burying the channel. Everyone who has written in a thread hears about new replies.</p>
+      </div>
+      <div class="frag dock-bottom" data-ui>
+        <div class="ui-head"><span>Thread</span><span class="count"># design</span></div>
+        <article class="msg">
+          <span class="av">S</span>
+          <div class="msg-body">
+            <header><span class="who">Samuel Mensah</span><time>2:14 PM</time></header>
+            <p>New onboarding flow is in Figma. Too many steps?</p>
+          </div>
+        </article>
+        <p class="sep ui-meta">2 replies</p>
+        <article class="msg">
+          <span class="av">L</span>
+          <div class="msg-body">
+            <header><span class="who">Leila Haddad</span><time>2:20 PM</time></header>
+            <p>Merge steps 2 and 3, the rest reads well.</p>
+          </div>
+        </article>
+        <article class="msg">
+          <span class="av">S</span>
+          <div class="msg-body">
+            <header><span class="who">Samuel Mensah</span><time>2:22 PM</time></header>
+            <p>Done. Four steps now.</p>
+          </div>
+        </article>
+      </div>
+    </article>
+
+    <!-- 2. Search (fragment top) -->
+    <article class="cell bottom" data-reveal>
+      <div class="frag dock-top" data-ui data-search>
+        <div class="searchbar">
+          <Icon name="search" size={16} />
+          <label class="sr-only" for="demo-search">Search messages</label>
+          <input id="demo-search" value="invoice" autocomplete="off" />
+          <span class="chip">in:#finance</span>
+        </div>
+        <ul class="results" role="list" data-results>
+          <li data-text="March invoice for the Harbour project is paid, receipt in the folder"><b>Aiko Tanaka</b> <span class="ui-meta">#finance · Mar 12</span><p>March <mark>invoice</mark> for the Harbour project is paid, receipt in the folder.</p></li>
+          <li data-text="Can someone resend the invoice template? The old link expired"><b>Priya Raman</b> <span class="ui-meta">#finance · Feb 27</span><p>Can someone resend the <mark>invoice</mark> template? The old link expired.</p></li>
+          <li data-text="Invoice numbers now start at 2026-100, see the pinned note"><b>Jonas Lindqvist</b> <span class="ui-meta">#finance · Jan 8</span><p><mark>Invoice</mark> numbers now start at 2026-100, see the pinned note.</p></li>
+        </ul>
+      </div>
+      <div class="copy">
+        <h3>Search everything</h3>
+        <p>Every channel and conversation you can see. Narrow it by channel, person, date or files. Try typing.</p>
+      </div>
+    </article>
+
+    <!-- 3. Mentions and reactions (text top) -->
+    <article class="cell top" data-reveal>
+      <div class="copy">
+        <h3>Mentions and reactions</h3>
+        <p>Set each channel to notify you of everything, only @mentions, or nothing. A reaction says “seen” without another message.</p>
+      </div>
+      <div class="frag dock-bottom right" data-ui>
+        <article class="msg is-hover">
+          <span class="av">A</span>
+          <div class="msg-body">
+            <header><span class="who">Aiko Tanaka</span><time>4:02 PM</time></header>
+            <p><span class="mention me">@Maya</span> the client signed off on the final designs. Ship it Thursday?</p>
+            <ul class="reacts" aria-label="Reactions">
+              <li><button class="react" type="button" aria-pressed="true" data-react><span>🚀</span><span class="n">4</span></button></li>
+              <li><button class="react" type="button" aria-pressed="false" data-react><span>✅</span><span class="n">2</span></button></li>
+              <li><button class="react" type="button" aria-pressed="false" data-react><span>🎉</span><span class="n">1</span></button></li>
+            </ul>
+          </div>
+          <div class="msg-actions" aria-hidden="true">
+            <span>✅</span><span>🎉</span><span><Icon name="smile" size={16} /></span><span><Icon name="reply" size={16} /></span>
+          </div>
+        </article>
+      </div>
+    </article>
+
+    <!-- 4. Files (fragment top) -->
+    <article class="cell bottom" data-reveal>
+      <div class="frag dock-top left" data-ui>
+        <article class="msg">
+          <span class="av">L</span>
+          <div class="msg-body">
+            <header><span class="who">Leila Haddad</span><time>11:30 AM</time></header>
+            <p>Brief and the latest export for review:</p>
+            <div class="file"><span class="ext">PDF</span><span><b>Harbour-brief-v3.pdf</b><span class="ui-meta">2.4 MB</span></span></div>
+            <div class="file"><span class="ext img">PNG</span><span><b>homepage-hero.png</b><span class="ui-meta">1.1 MB</span></span></div>
+            <div class="file"><span class="ext zip">ZIP</span><span><b>icon-set.zip</b><span class="ui-meta">6.8 MB</span></span></div>
+          </div>
+        </article>
+      </div>
+      <div class="copy">
+        <h3>Files stay private</h3>
+        <p>Drop in documents and images. They’re kept in your own storage, and every download checks that the person may see it.</p>
+      </div>
+    </article>
+
+    <!-- 5. Notifications (text top) -->
+    <article class="cell top" data-reveal>
+      <div class="copy">
+        <h3>Notifications, your way</h3>
+        <p>Push to your phone or desktop, an hourly or daily email summary of what you missed, and do-not-disturb.</p>
+      </div>
+      <div class="frag dock-bottom" data-ui>
+        <div class="setting">
+          <span><b>Push notifications</b><span class="ui-meta">On this device</span></span>
+          <button class="toggle" type="button" role="switch" aria-checked="true" aria-label="Push notifications" data-toggle></button>
+        </div>
+        <div class="setting">
+          <span><b>Email summary</b><span class="ui-meta">What you missed</span></span>
+          <span class="seg" role="group" aria-label="Email summary" data-seg>
+            <button type="button" aria-pressed="false">Hourly</button>
+            <button type="button" aria-pressed="true">Daily</button>
+            <button type="button" aria-pressed="false">Off</button>
+          </span>
+        </div>
+        <div class="setting">
+          <span><b>Do not disturb</b><span class="ui-meta">Until 8:00 AM</span></span>
+          <button class="toggle" type="button" role="switch" aria-checked="false" aria-label="Do not disturb" data-toggle></button>
+        </div>
+      </div>
+    </article>
+
+    <!-- 6. Roles (fragment top) -->
+    <article class="cell bottom" data-reveal>
+      <div class="frag dock-top right" data-ui>
+        <p class="frag-title">Members</p>
+        <ul class="people" role="list">
+          <li><span class="av sm">M</span><span><b>Maya Okafor</b><span class="ui-meta">maya@northwind.studio</span></span><span class="role">Owner</span></li>
+          <li><span class="av sm">J</span><span><b>Jonas Lindqvist</b><span class="ui-meta">jonas@northwind.studio</span></span><span class="role sel">Admin</span></li>
+          <li><span class="av sm">P</span><span><b>Priya Raman</b><span class="ui-meta">priya@northwind.studio</span></span><span class="role sel">Member</span></li>
+          <li><span class="av sm">E</span><span><b>Elena Petrova</b><span class="ui-meta">elena@harbour.co</span></span><span class="role sel">Guest</span></li>
+        </ul>
+      </div>
+      <div class="copy">
+        <h3>Roles that make sense</h3>
+        <p>Owners and admins run the place, members chat, and guests see only the channels you choose for them.</p>
+      </div>
+    </article>
+  </div>
+</section>
+
+<style>
+  .features {
+    padding-block: var(--section);
+  }
+  .features h2 {
+    margin-bottom: 56px;
+  }
+  .cells {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .cell {
+    position: relative;
+    height: 460px;
+    border-radius: var(--r);
+    background: var(--surface);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .cell.bottom {
+    justify-content: space-between;
+  }
+  .copy {
+    padding: 24px;
+  }
+  .copy h3 {
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .copy p {
+    margin-top: 6px;
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 40ch;
+  }
+  .frag {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    transition: transform 0.6s var(--ease-out);
+  }
+  .frag.left {
+    left: -1px;
+    right: 48px;
+    border-top-left-radius: 0;
+  }
+  .frag.right {
+    left: 48px;
+    right: -1px;
+  }
+  .dock-bottom {
+    bottom: -12px;
+  }
+  .dock-top {
+    top: -12px;
+  }
+  .cell:hover .dock-bottom {
+    transform: translateY(-8px);
+  }
+  .cell:hover .dock-top {
+    transform: translateY(8px);
+  }
+  .cell.bottom .copy {
+    margin-top: auto;
+  }
+  .sep {
+    padding: 8px 20px 0 68px;
+  }
+  .frag .msg:last-child {
+    padding-bottom: 24px;
+  }
+  .dock-top .msg:first-child {
+    padding-top: 28px;
+  }
+  .searchbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 28px 16px 8px;
+    height: 42px;
+    padding: 0 12px;
+    border-radius: 8px;
+    background: var(--surface);
+    box-shadow: inset 0 0 0 1px var(--edge);
+    color: var(--meta);
+  }
+  .searchbar:focus-within {
+    box-shadow:
+      inset 0 0 0 1px var(--edge),
+      0 0 0 2px var(--accent);
+  }
+  .searchbar input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    outline: none;
+    color: var(--ink);
+    font-size: 15px;
+  }
+  .chip {
+    border-radius: 900px;
+    padding: 2px 10px;
+    background: var(--surface-2);
+    color: var(--muted);
+    font-size: 13px;
+  }
+  .results {
+    padding: 4px 8px 16px;
+  }
+  .results li {
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  .results li:hover {
+    background: var(--surface);
+  }
+  .results li[hidden] {
+    display: none;
+  }
+  .results p {
+    margin-top: 2px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .results mark {
+    background: color-mix(in srgb, var(--accent) 28%, transparent);
+    color: var(--ink);
+    border-radius: 3px;
+    padding: 0 2px;
+  }
+  .ext.img {
+    background: var(--accent);
+  }
+  .ext.zip {
+    background: var(--bronze);
+    color: var(--ink);
+  }
+  .setting {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+  }
+  .setting + .setting {
+    box-shadow: inset 0 1px 0 var(--surface-2);
+  }
+  .setting:last-child {
+    padding-bottom: 28px;
+  }
+  .setting b,
+  .people b {
+    display: block;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .frag-title {
+    padding: 28px 20px 8px;
+    font-weight: 600;
+  }
+  .people {
+    padding: 0 8px 16px;
+  }
+  .people li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 12px;
+    border-radius: 6px;
+  }
+  .people li:hover {
+    background: var(--surface);
+  }
+  .av.sm {
+    width: 32px;
+    height: 32px;
+    margin: 0;
+  }
+  .people li > span:nth-child(2) {
+    flex: 1;
+    min-width: 0;
+  }
+  .role {
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .role.sel {
+    padding: 4px 26px 4px 10px;
+    border-radius: 6px;
+    background: var(--bg);
+    box-shadow: inset 0 0 0 1px var(--edge);
+    color: var(--ink);
+    position: relative;
+  }
+  .role.sel::after {
+    content: '';
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    width: 6px;
+    height: 6px;
+    border-right: 1.5px solid var(--meta);
+    border-bottom: 1.5px solid var(--meta);
+    transform: translateY(-70%) rotate(45deg);
+  }
+
+  @media (max-width: 1100px) {
+    .cells {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 700px) {
+    .cells {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .cell {
+      height: auto;
+      min-height: 0;
+    }
+    .cell.bottom {
+      flex-direction: column-reverse;
+      justify-content: flex-start;
+    }
+    .cell.bottom .copy {
+      margin-top: 0;
+    }
+    .frag,
+    .frag.left,
+    .frag.right {
+      position: relative;
+      inset: auto;
+      margin: 0 0 -12px 24px;
+      width: calc(100% + 12px);
+    }
+    .cell:nth-child(even) .frag {
+      margin: 0 0 -12px -12px;
+    }
+    .cell:hover .frag {
+      transform: none;
+    }
+    .copy {
+      padding: 22px 20px 20px;
+    }
+  }
+</style>
+
+<script>
+  // The fragments work: reactions toggle, switches switch, search filters as you type.
+  document.querySelectorAll<HTMLButtonElement>('.features [data-react]').forEach((b) =>
+    b.addEventListener('click', () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', String(on));
+      const n = b.querySelector('.n')!;
+      n.textContent = String(Number(n.textContent) + (on ? 1 : -1));
+    }),
+  );
+  document.querySelectorAll<HTMLButtonElement>('.features [data-toggle]').forEach((b) =>
+    b.addEventListener('click', () => b.setAttribute('aria-checked', String(b.getAttribute('aria-checked') !== 'true'))),
+  );
+  document.querySelectorAll<HTMLElement>('.features [data-seg]').forEach((g) =>
+    g.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest('button');
+      if (!btn) return;
+      g.querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === btn)));
+    }),
+  );
+  const search = document.querySelector<HTMLElement>('[data-search]');
+  if (search) {
+    const input = search.querySelector('input')!;
+    const items = [...search.querySelectorAll<HTMLLIElement>('[data-results] li')];
+    const originals = items.map((li) => li.querySelector('p')!.textContent!);
+    const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]!);
+    input.addEventListener('input', () => {
+      const q = input.value.trim().toLowerCase();
+      items.forEach((li, i) => {
+        const text = originals[i]!;
+        const at = q ? text.toLowerCase().indexOf(q) : -1;
+        li.hidden = !!q && at < 0;
+        const p = li.querySelector('p')!;
+        p.innerHTML = at < 0 ? esc(text) : esc(text.slice(0, at)) + `<mark>${esc(text.slice(at, at + q.length))}</mark>` + esc(text.slice(at + q.length));
+      });
+    });
+  }
+</script>

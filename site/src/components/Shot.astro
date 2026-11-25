@@ -1,0 +1,56 @@
+---
+/**
+ * A real screenshot of the app by name. When the capture hasn't been made yet it renders a
+ * labelled slot saying exactly which capture belongs there, so nothing is ever faked.
+ */
+import { Image } from 'astro:assets';
+import { screen } from '../lib/media';
+
+interface Props {
+  name: string;
+  alt: string;
+  widths?: number[];
+  sizes?: string;
+  class?: string;
+  eager?: boolean;
+}
+const { name, alt, widths = [480, 800, 1200, 1600, 2400], sizes = '(max-width: 800px) 100vw, 60vw', class: cls, eager = false } = Astro.props;
+const img = screen(name);
+---
+
+{
+  img ? (
+    <Image
+      src={img}
+      alt={alt}
+      widths={widths.filter((w) => w <= img.width)}
+      sizes={sizes}
+      format="webp"
+      quality={82}
+      class={cls}
+      loading={eager ? 'eager' : 'lazy'}
+      fetchpriority={eager ? 'high' : undefined}
+    />
+  ) : (
+    <div class:list={['missing', cls]} role="img" aria-label={alt}>
+      <span>Capture needed: {name}.png</span>
+    </div>
+  )
+}
+
+<style>
+  img {
+    width: 100%;
+    height: auto;
+  }
+  .missing {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 10;
+    background: var(--surface);
+    color: var(--meta);
+    font-size: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+</style>

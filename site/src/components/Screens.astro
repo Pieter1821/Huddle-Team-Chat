@@ -1,0 +1,215 @@
+---
+/** Every screen: a swipeable row of real screenshots of Huddle, phone and desktop. */
+import { getImage } from 'astro:assets';
+import Carousel, { type Card } from './react/Carousel';
+import { screen } from '../lib/media';
+
+const list = [
+  { name: 'sidebar-phone', kind: 'On your phone', title: 'Every chat in one list', alt: 'Huddle on a phone: channels and direct messages, with unread ones in bold', phone: true },
+  { name: 'search-desktop', kind: 'Search', title: 'Find it in seconds', alt: 'Search open over the app, with results from several channels and the matching words marked' },
+  { name: 'thread-phone', kind: 'On your phone', title: 'Threads on the go', alt: 'A thread on a phone: the original post with its image and five replies', phone: true },
+  { name: 'private-channel-desktop', kind: 'Channels', title: 'Private when it matters', alt: 'A private channel, marked with a lock, where four people plan hiring and budget' },
+  { name: 'mentions-desktop', kind: 'Messages', title: 'Mention anyone', alt: 'Typing @ in a message brings up a list of people to mention' },
+  { name: 'signin-branded-desktop', kind: 'Your brand', title: 'Your logo and colour', alt: 'The sign-in page with the team’s own logo and accent colour' },
+  { name: 'settings-phone', kind: 'On your phone', title: 'Your settings', alt: 'Settings on a phone: profile, authenticator app and notifications for this device', phone: true },
+  { name: 'admin-usage-desktop', kind: 'For admins', title: 'See what you use', alt: 'Admin usage page showing how much of the free database and file storage is used' },
+  { name: 'admin-security-log-desktop', kind: 'For admins', title: 'A log of every change', alt: 'Security log: who invited whom, created webhooks and changed settings, and when' },
+  { name: 'admin-import-desktop', kind: 'Moving over', title: 'Bring your Slack history', alt: 'Importing a Slack export, checked first, with counts of people, channels and messages' },
+  { name: 'engineering-desktop', kind: 'Integrations', title: 'Tools can post too', alt: 'The #engineering channel with build results posted by a webhook and a code snippet' },
+  { name: 'offline-desktop', kind: 'Installed app', title: 'Even offline', alt: 'Huddle’s offline page, shown instead of a browser error when there is no connection' },
+];
+
+const cards: Card[] = [];
+for (const c of list) {
+  const img = screen(c.name);
+  if (!img) continue;
+  const thumb = await getImage({ src: img, width: c.phone ? 600 : 1200, format: 'webp', quality: 80 });
+  const full = await getImage({ src: img, width: Math.min(img.width, c.phone ? 1170 : 2400), format: 'webp', quality: 86 });
+  cards.push({ title: c.title, kind: c.kind, alt: c.alt, thumb: thumb.src, full: full.src, phone: c.phone });
+}
+---
+
+<section class="screens" aria-labelledby="screens-title">
+  <div class="wrap head" data-reveal>
+    <h2 id="screens-title" class="h2">Every screen, for real</h2>
+    <p class="soft">Nothing here is a mock-up. Tap any screen to see it full size.</p>
+  </div>
+  <Carousel client:visible cards={cards} />
+</section>
+
+<style>
+  .screens {
+    padding-block: var(--section) 0;
+  }
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px 24px;
+    margin-bottom: 40px;
+  }
+  .head p {
+    font-size: 17px;
+  }
+  .screens :global(.cc-row) {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    scroll-padding-inline: var(--m);
+    padding: 8px var(--m) 24px;
+    scrollbar-width: none;
+  }
+  .screens :global(.cc-row::-webkit-scrollbar) {
+    display: none;
+  }
+  .screens :global(.cc-card) {
+    position: relative;
+    flex: none;
+    width: min(720px, 84vw);
+    height: 520px;
+    padding: 0;
+    border: 0;
+    border-radius: 22px;
+    background: var(--surface);
+    overflow: hidden;
+    text-align: left;
+    cursor: zoom-in;
+    scroll-snap-align: start;
+    transition: transform 0.5s var(--ease-out);
+  }
+  .screens :global(.cc-card.phone) {
+    width: 300px;
+  }
+  .screens :global(.cc-card:hover) {
+    transform: translateY(-6px);
+  }
+  .screens :global(.cc-card img) {
+    position: absolute;
+    left: 24px;
+    right: 0;
+    top: 104px;
+    width: calc(100% - 24px);
+    height: auto;
+    border-top-left-radius: 12px;
+    transition: transform 0.7s var(--ease-out);
+    transform-origin: top left;
+  }
+  .screens :global(.cc-card.phone img) {
+    left: 24px;
+    width: calc(100% - 48px);
+    border-radius: 18px 18px 0 0;
+  }
+  .screens :global(.cc-card:hover img) {
+    transform: scale(1.03);
+  }
+  .screens :global(.cc-text) {
+    position: absolute;
+    left: 24px;
+    right: 24px;
+    top: 22px;
+    z-index: 1;
+  }
+  .screens :global(.cc-kind) {
+    display: block;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  .screens :global(.cc-title) {
+    display: block;
+    margin-top: 2px;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--ink);
+  }
+  .screens :global(.cc-nav) {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 8px var(--m) 0;
+  }
+  .screens :global(.cc-nav button) {
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--ink);
+    cursor: pointer;
+    transition:
+      background-color 0.2s,
+      transform 0.25s var(--ease-out),
+      opacity 0.2s;
+  }
+  .screens :global(.cc-nav button:hover:not(:disabled)) {
+    background: var(--bronze);
+  }
+  .screens :global(.cc-nav button:active:not(:disabled)) {
+    transform: scale(0.92);
+  }
+  .screens :global(.cc-nav button:disabled) {
+    opacity: 0.35;
+    cursor: default;
+  }
+  .screens :global(.cc-modal) {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 72px var(--m) 32px;
+    background: rgb(10 10 10 / 0.88);
+    overflow-y: auto;
+  }
+  .screens :global(.cc-full) {
+    margin: 0;
+    width: min(1280px, 100%);
+  }
+  .screens :global(.cc-full.phone) {
+    width: min(390px, 100%);
+  }
+  .screens :global(.cc-full img) {
+    width: 100%;
+    height: auto;
+    border-radius: 14px;
+  }
+  .screens :global(.cc-full figcaption) {
+    margin-top: 16px;
+    font-size: 16px;
+    color: var(--muted);
+  }
+  .screens :global(.cc-full figcaption b) {
+    display: block;
+    color: var(--ink);
+    font-size: 20px;
+  }
+  .screens :global(.cc-close) {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    display: grid;
+    place-items: center;
+    width: 48px;
+    height: 48px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--surface-2);
+    color: var(--ink);
+    cursor: pointer;
+  }
+  @media (max-width: 700px) {
+    .screens :global(.cc-card) {
+      height: 440px;
+    }
+    .screens :global(.cc-card.phone) {
+      width: 260px;
+    }
+    .screens :global(.cc-title) {
+      font-size: 21px;
+    }
+  }
+</style>

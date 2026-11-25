@@ -1,0 +1,63 @@
+---
+/** What Huddle is, for whom, where it runs and how people get in: a lead line over four columns. */
+---
+
+<section class="intro wrap" aria-labelledby="intro-title">
+  <h2 id="intro-title" class="sr-only">What Huddle is</h2>
+  <div data-reveal>
+    <p class="lead-line">
+      Huddle is the chat your team opens every morning: channels, threads, direct messages, files and search.
+      It runs on your own Cloudflare account, on the free plan, under the MIT licence, so it stays yours.
+    </p>
+  </div>
+  <div class="cols" data-reveal>
+    <p><b>For small teams.</b> Studios, agencies, clubs, schools, charities and companies of a few to a few hundred people who want proper team chat without a monthly bill for every person or someone else's terms on their history.</p>
+    <p><b>Everything you expect.</b> Public and private channels, direct messages, threads, reactions, @mentions, files, full search, unread counts, push notifications and email summaries, with owners, admins, members and guests.</p>
+    <p><b>On your own account.</b> Huddle, your messages and your files all live in your own Cloudflare account. No company sits in the middle reading or selling your data. There isn't a Huddle company at all.</p>
+    <p><b>Phone-code sign-in.</b> People sign in with a six-digit code from an authenticator app, or an emailed code if you turn email on. There are no passwords to leak, and an invite link decides who gets in.</p>
+  </div>
+</section>
+
+<style>
+  .intro {
+    padding-block: var(--section) 96px;
+  }
+  .lead-line {
+    max-width: 62ch;
+    font-size: clamp(22px, 2.2vw, 32px);
+    line-height: 1.22;
+    letter-spacing: -0.02em;
+    text-wrap: pretty;
+  }
+  .cols {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 24px;
+    margin-top: 72px;
+  }
+  .cols p {
+    font-size: 16px;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+  .cols b {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  @media (max-width: 1000px) {
+    .cols {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 40px 20px;
+    }
+  }
+  @media (max-width: 600px) {
+    .lead-line {
+      font-size: 21px;
+    }
+    .cols {
+      grid-template-columns: 1fr;
+      gap: 28px;
+      margin-top: 48px;
+    }
+  }
+</style>

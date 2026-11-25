@@ -7,3 +7,4 @@ migrations/meta
 worker-configuration.d.ts
 package-lock.json
 *.md
+site

@@ -1,0 +1,210 @@
+---
+/**
+ * The first screen: what Huddle is in large type, the one action, then the real app (a screenshot
+ * of a working Huddle) tilting flat as you scroll.
+ */
+import { Image } from 'astro:assets';
+import ContainerScroll from './react/ContainerScroll';
+import Icon from './Icon.astro';
+import { DEPLOY_URL } from '../lib/links';
+import { screen } from '../lib/media';
+
+const desk = screen('channel-desktop')!;
+const phone = screen('channel-phone')!;
+const words = ['Your', 'team', 'chat,', 'on', 'your', 'cloud.'];
+---
+
+<section class="hero" aria-labelledby="hero-title">
+  <div class="top wrap">
+    <h1 id="hero-title" class="title">
+      {
+        words.map((w, i) => (
+          <>
+            <span class="w" style={`--i:${i}`}>{w}</span>
+            {i === 2 ? <br /> : ' '}
+          </>
+        ))
+      }
+    </h1>
+    <p class="sub">
+      Free, open-source team chat with channels, threads, files and search. It runs on your own Cloudflare
+      account, so there’s no price per person and your messages stay yours.
+    </p>
+    <div class="acts">
+      <a class="btn btn-lg" href={DEPLOY_URL} data-magnetic>Deploy to Cloudflare <Icon name="arrow" size={18} /></a>
+      <a class="btn btn-lg btn-quiet" href="#tour">See it working</a>
+    </div>
+    <ul class="facts" role="list">
+      <li>Free forever, MIT licence</li>
+      <li>Runs on Cloudflare’s free plan</li>
+      <li>Phone and desktop</li>
+    </ul>
+  </div>
+
+  <div class="stage">
+    <ContainerScroll client:load>
+      <Image
+        class="shot desk"
+        src={desk}
+        alt="Huddle on a desktop: the #design channel of a demo team, with a shared mockup, reactions and a thread"
+        widths={[800, 1200, 1600, 2400, 2880].filter((w) => w <= desk.width)}
+        sizes="(max-width: 760px) 100vw, min(1180px, 92vw)"
+        format="webp"
+        quality={84}
+        loading="eager"
+        fetchpriority="high"
+      />
+      <Image
+        class="shot phone"
+        src={phone}
+        alt="Huddle on a phone: a channel with messages, reactions and the message box"
+        widths={[390, 780, 1170].filter((w) => w <= phone.width)}
+        sizes="80vw"
+        format="webp"
+        quality={84}
+        loading="eager"
+      />
+    </ContainerScroll>
+  </div>
+</section>
+
+<style>
+  .hero {
+    padding-top: clamp(56px, 11vh, 132px);
+    overflow-x: clip;
+  }
+  .top {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  .title {
+    font-size: clamp(48px, 8.2vw, 136px);
+    line-height: 0.94;
+    letter-spacing: -0.05em;
+    font-weight: 600;
+  }
+  /* Text generate effect (after Aceternity UI): each word comes into focus in turn. */
+  .w {
+    display: inline-block;
+    animation: word 0.9s var(--ease-out) both;
+    animation-delay: calc(0.08s + var(--i) * 0.09s);
+  }
+  @keyframes word {
+    from {
+      opacity: 0;
+      filter: blur(12px);
+      transform: translateY(0.18em);
+    }
+  }
+  .sub {
+    margin-top: 32px;
+    max-width: 50ch;
+    font-size: clamp(17px, 1.35vw, 21px);
+    line-height: 1.5;
+    color: var(--muted);
+    animation: rise 0.9s var(--ease-out) 0.55s both;
+  }
+  .acts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 12px;
+    margin-top: 36px;
+    animation: rise 0.9s var(--ease-out) 0.7s both;
+  }
+  .facts {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px 28px;
+    margin-top: 28px;
+    font-size: 15px;
+    color: var(--muted);
+    animation: rise 0.9s var(--ease-out) 0.85s both;
+  }
+  .facts li {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .facts li::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .w,
+    .sub,
+    .acts,
+    .facts {
+      animation: none;
+    }
+  }
+
+  .stage {
+    margin-top: clamp(40px, 7vh, 88px);
+    padding-inline: var(--m);
+    perspective: 1200px;
+  }
+  .stage :global(.cs-wrap) {
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  .stage :global(.cs-card) {
+    transform-origin: 50% 0%;
+    padding: 10px;
+    border-radius: 22px;
+    background: var(--surface-2);
+    will-change: transform;
+  }
+  .stage :global(.cs-screen) {
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--bg);
+  }
+  .stage :global(.shot) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .stage :global(.shot.phone) {
+    display: none;
+  }
+  @media (max-width: 760px) {
+    .title {
+      font-size: clamp(44px, 13vw, 72px);
+    }
+    .acts {
+      width: 100%;
+    }
+    .acts .btn {
+      flex: 1 1 100%;
+    }
+    .stage :global(.cs-wrap) {
+      max-width: 340px;
+    }
+    .stage :global(.cs-card) {
+      border-radius: 36px;
+      padding: 8px;
+    }
+    .stage :global(.cs-screen) {
+      border-radius: 28px;
+    }
+    .stage :global(.shot.desk) {
+      display: none;
+    }
+    .stage :global(.shot.phone) {
+      display: block;
+    }
+  }
+</style>

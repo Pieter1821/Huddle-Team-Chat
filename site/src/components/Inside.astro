@@ -1,0 +1,335 @@
+---
+/**
+ * Under the hood, for technical readers: facts beside a wide paragraph, an architecture diagram
+ * you can explore, then the parts list and the security record.
+ */
+const nodes = [
+  { id: 'people', x: 0, y: 1, title: 'Your team', text: 'People use Huddle in a browser tab or as an app on their phone or computer. Nothing to install from an app store.' },
+  { id: 'worker', x: 1, y: 1, title: 'Huddle', text: 'The app itself, running on Cloudflare close to wherever each person is. It checks who you are before showing anything.' },
+  { id: 'room', x: 2, y: 0, title: 'A room per chat', text: 'Every channel and direct message gets its own small room. It keeps messages in the right order and delivers them to everyone instantly.' },
+  { id: 'hub', x: 2, y: 2, title: 'Unread counts', text: 'Keeps the unread counts in your sidebar up to date as messages arrive, and makes sure nobody sends more than 60 messages a minute.' },
+  { id: 'd1', x: 3, y: 0, title: 'Your messages', text: 'Messages, channels, people and settings are saved in a database in your own Cloudflare account. Search looks through it.' },
+  { id: 'r2', x: 3, y: 1, title: 'Your files', text: 'Shared files are kept in private storage in your account. Huddle checks that a person may see a file before every download.' },
+  { id: 'queue', x: 3, y: 2, title: 'Emails and alerts', text: 'Phone notifications and email summaries are sent from here, and tried again if something fails.' },
+];
+const edges = [
+  ['people', 'worker'],
+  ['worker', 'room'],
+  ['worker', 'hub'],
+  ['worker', 'r2'],
+  ['room', 'd1'],
+  ['worker', 'queue'],
+  ['hub', 'queue'],
+];
+const W = 1000;
+const H = 360;
+const col = (x: number) => 20 + x * 250;
+const row = (y: number) => 40 + y * 140;
+const pos = Object.fromEntries(nodes.map((n) => [n.id, { x: col(n.x), y: row(n.y) }]));
+const built = [
+  ['Runs on', 'Cloudflare, your account'],
+  ['Opens in', 'Any modern browser'],
+  ['Installs on', 'Phone and computer'],
+  ['Messages', 'Arrive instantly'],
+  ['Search', 'Every message'],
+  ['Updates', 'From your GitHub copy'],
+  ['Source code', 'Open, MIT licence'],
+  ['Price', 'Free'],
+];
+const security = [
+  ['Sign-in', 'Code from your phone'],
+  ['Passwords', 'None to leak'],
+  ['Wrong codes', 'Locked after 8 tries'],
+  ['Who gets in', 'Invite links only'],
+  ['Invite links', 'Work once, 7 days'],
+  ['Files', 'Private, checked'],
+  ['Admin actions', 'Written to a log'],
+  ['Your data', 'Stays in your account'],
+];
+---
+
+<section class="inside wrap" id="inside" aria-labelledby="inside-title">
+  <h2 id="inside-title" class="sr-only">How Huddle is built</h2>
+  <div class="row1">
+    <dl class="facts" data-reveal>
+      <div><dt>Runs on</dt><dd>Cloudflare</dd></div>
+      <div><dt>Your data</dt><dd>In your own account</dd></div>
+      <div><dt>Licence</dt><dd>MIT, free</dd></div>
+    </dl>
+    <div class="wide" data-reveal>
+      <p class="para">
+        Huddle runs on Cloudflare, a company that hosts websites all over the world, inside an account
+        that belongs to you. Every channel gets its own little room that delivers messages the moment
+        they’re sent. Your messages, files and settings stay in your account, not ours. Tap a part
+        below to see what it does.
+      </p>
+    </div>
+  </div>
+
+  <figure class="diagram" data-diagram data-reveal>
+    <div class="canvas">
+      <svg viewBox={`0 0 ${W} ${H}`} aria-hidden="true" preserveAspectRatio="none">
+        {
+          edges.map(([a, b]) => {
+            const p = pos[a!]!;
+            const q = pos[b!]!;
+            const x1 = p.x + 220;
+            const y1 = p.y + 28;
+            const x2 = q.x;
+            const y2 = q.y + 28;
+            const mx = (x1 + x2) / 2;
+            return (
+              <path
+                class="edge"
+                data-a={a}
+                data-b={b}
+                d={`M${x1} ${y1} C${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`}
+                pathLength="100"
+              />
+            );
+          })
+        }
+      </svg>
+      {
+        nodes.map((n, i) => (
+          <button
+            type="button"
+            class="node"
+            data-node={n.id}
+            aria-pressed={i === 1 ? 'true' : 'false'}
+            style={`left:${(col(n.x) / W) * 100}%;top:${(row(n.y) / H) * 100}%;width:${(220 / W) * 100}%`}
+          >
+            {n.title}
+          </button>
+        ))
+      }
+    </div>
+    <figcaption class="explain" aria-live="polite">
+      {
+        nodes.map((n, i) => (
+          <div data-explain={n.id} hidden={i !== 1}>
+            <b>{n.title}</b>
+            <p>{n.text}</p>
+          </div>
+        ))
+      }
+    </figcaption>
+  </figure>
+
+  <div class="row2">
+    <p class="word" data-reveal><span>In short</span></p>
+    <div class="lists">
+      <ul role="list" aria-label="At a glance" data-reveal>
+        {built.map(([a, b]) => <li><span>{a}</span><span class="soft">{b}</span></li>)}
+      </ul>
+      <ul role="list" aria-label="Safety" data-reveal>
+        {security.map(([a, b]) => <li><span>{a}</span><span class="soft">{b}</span></li>)}
+      </ul>
+    </div>
+  </div>
+</section>
+
+<style>
+  .inside {
+    --line: 34%;
+    padding-block: 144px;
+    background: var(--surface);
+  }
+  .row1 {
+    display: grid;
+    grid-template-columns: var(--line) 1fr;
+  }
+  .facts {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    font-size: 17px;
+  }
+  .facts dt {
+    color: var(--muted);
+  }
+  .facts dd {
+    margin: 0;
+  }
+  .para {
+    max-width: 90%;
+    font-size: clamp(20px, 1.7vw, 26px);
+    line-height: 1.35;
+    letter-spacing: -0.01em;
+  }
+  .diagram {
+    margin: 72px 0 0 var(--line);
+  }
+  .canvas {
+    position: relative;
+    aspect-ratio: 1000 / 360;
+  }
+  .canvas svg {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+  }
+  .edge {
+    fill: none;
+    stroke: var(--edge);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
+    transition: stroke 0.3s;
+  }
+  .edge.on {
+    stroke: var(--accent);
+    stroke-dasharray: 6 6;
+    animation: flow 1.2s linear infinite;
+  }
+  @keyframes flow {
+    to {
+      stroke-dashoffset: -24;
+    }
+  }
+  .node {
+    position: absolute;
+    height: 56px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--r);
+    background: var(--bronze);
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 500;
+    text-align: left;
+    cursor: pointer;
+    transition:
+      background-color 0.25s,
+      color 0.25s,
+      transform 0.3s var(--ease-out);
+  }
+  .node:hover {
+    transform: translateY(-2px);
+    background: #5f5e58;
+  }
+  .node[aria-pressed='true'] {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .node.near:not([aria-pressed='true']) {
+    background: var(--stage);
+  }
+  .explain {
+    margin-top: 32px;
+    min-height: 96px;
+    max-width: 60ch;
+  }
+  .explain b {
+    font-size: 20px;
+  }
+  .explain p {
+    margin-top: 4px;
+    font-size: 17px;
+    color: var(--muted);
+  }
+  .row2 {
+    display: grid;
+    grid-template-columns: var(--line) 1fr;
+    margin-top: 96px;
+  }
+  .word {
+    font-size: 17px;
+    color: var(--muted);
+  }
+  .lists {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 40px 64px;
+  }
+  .lists ul {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 17px;
+  }
+  .lists li span:last-child {
+    text-align: right;
+  }
+  .lists li {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  @media (max-width: 1000px) {
+    .row1,
+    .row2 {
+      grid-template-columns: 1fr;
+    }
+    .para {
+      max-width: none;
+      font-size: 19px;
+    }
+    .facts {
+      order: 2;
+      margin-top: 32px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      font-size: 14px;
+    }
+    .diagram {
+      margin: 48px 0 0;
+    }
+    .canvas {
+      aspect-ratio: auto;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .canvas svg {
+      display: none;
+    }
+    .node {
+      position: static;
+      width: auto !important;
+      height: 52px;
+    }
+    .word {
+      color: var(--ink);
+      margin-bottom: 16px;
+    }
+    .lists {
+      grid-template-columns: 1fr;
+    }
+    .lists ul {
+      font-size: 16px;
+    }
+    .inside {
+      padding-block: 96px;
+    }
+  }
+</style>
+
+<script>
+  // Choosing a part lights its connections and explains what it does.
+  const fig = document.querySelector<HTMLElement>('[data-diagram]');
+  if (fig) {
+    const nodes = [...fig.querySelectorAll<HTMLButtonElement>('[data-node]')];
+    const edges = [...fig.querySelectorAll<SVGPathElement>('.edge')];
+    const pick = (id: string) => {
+      const near = new Set<string>();
+      edges.forEach((e) => {
+        const on = e.dataset.a === id || e.dataset.b === id;
+        e.classList.toggle('on', on);
+        if (on) near.add(e.dataset.a === id ? e.dataset.b! : e.dataset.a!);
+      });
+      nodes.forEach((n) => {
+        n.setAttribute('aria-pressed', String(n.dataset.node === id));
+        n.classList.toggle('near', near.has(n.dataset.node!));
+      });
+      fig.querySelectorAll<HTMLElement>('[data-explain]').forEach((x) => (x.hidden = x.dataset.explain !== id));
+    };
+    nodes.forEach((n) => {
+      n.addEventListener('click', () => pick(n.dataset.node!));
+      n.addEventListener('pointerenter', () => matchMedia('(hover: hover)').matches && pick(n.dataset.node!));
+    });
+    pick('worker');
+  }
+</script>

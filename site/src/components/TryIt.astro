@@ -1,0 +1,89 @@
+---
+/** The live thing: a working channel to type into, right on the page. */
+import LiveChat from './LiveChat.astro';
+---
+
+<section class="try wrap" aria-labelledby="try-title">
+  <div class="words" data-reveal>
+    <h2 id="try-title" class="h2">Go on, say hello.</h2>
+    <p>
+      This is a Huddle channel, rebuilt right here on the page. Type a message and press Enter, or tap a
+      reaction. The team answers the way they would in the real app.
+    </p>
+    <ul class="hints" role="list">
+      <li>Messages appear for everyone instantly</li>
+      <li>You see when someone is typing</li>
+      <li>Reactions say “seen” without another message</li>
+    </ul>
+  </div>
+  <div class="chat" data-reveal>
+    <div class="frame"><LiveChat /></div>
+  </div>
+</section>
+
+<style>
+  .try {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: center;
+    padding-block: var(--section);
+  }
+  .words {
+    grid-column: 1 / span 5;
+  }
+  .words p {
+    margin-top: 20px;
+    max-width: 44ch;
+    font-size: 19px;
+    color: var(--muted);
+  }
+  .hints {
+    margin-top: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    font-size: 17px;
+  }
+  .hints li {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .hints li::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .chat {
+    grid-column: 7 / span 6;
+  }
+  .frame {
+    height: 520px;
+    padding: 10px;
+    border-radius: 22px;
+    background: var(--stage);
+  }
+  .frame :global([data-live]) {
+    border-radius: 14px;
+  }
+  @media (max-width: 900px) {
+    .words,
+    .chat {
+      grid-column: 1 / -1;
+    }
+    .chat {
+      margin-top: 40px;
+    }
+    .frame {
+      height: 480px;
+      padding: 6px;
+      border-radius: 18px;
+    }
+    .words p {
+      font-size: 17px;
+    }
+  }
+</style>

@@ -1,0 +1,181 @@
+---
+/** Questions people ask before deploying: filled tiles, one open at a time. */
+const faqs = [
+  {
+    q: 'Is it really free?',
+    a: 'Yes. Huddle is free and open source, with no paid version. It runs on your own Cloudflare account, and most teams stay inside Cloudflare’s free plan. Cloudflare asks for a card for file storage, but doesn’t charge while you stay under 10 GB a month.',
+  },
+  {
+    q: 'Who can read our messages?',
+    a: 'The people in your workspace (depending on their role) and whoever can log in to your Cloudflare account. There is no Huddle company in between. Messages are sent securely and stored scrambled in your own account. Like most team chats, they are not end-to-end encrypted.',
+  },
+  {
+    q: 'Do we need our own domain?',
+    a: 'No. Huddle works on the free workers.dev address Cloudflare gives you. You can add your own domain later; people sign in once more afterwards.',
+  },
+  {
+    q: 'Can we move over from Slack?',
+    a: 'Yes. An owner can import a Slack export: channels, messages, threads and files come across, spread over a few days if the history is large, so you stay inside the free plan.',
+  },
+  {
+    q: 'What if someone loses their phone?',
+    a: 'An admin opens People and chooses Reset app. That makes a one-time link, valid for seven days, to set up the authenticator app again. The owner can always recover with the setup key.',
+  },
+  {
+    q: 'Is there a phone app?',
+    a: 'Huddle installs from the browser on Android, iPhone and desktop, with its own icon and push notifications. There’s no app-store download to manage.',
+  },
+  {
+    q: 'How do updates reach our copy?',
+    a: 'Your copy of Huddle lives in your GitHub account. When you bring in the newest version there, Cloudflare updates your Huddle automatically, and everything else updates itself.',
+  },
+  {
+    q: 'Can other tools post into Huddle?',
+    a: 'Yes. An admin can make a special posting link (a webhook) for any channel, so other tools such as website monitors or forms can post messages there. Developers can also use Huddle’s API.',
+  },
+];
+---
+
+<section class="faq wrap" id="faq" aria-labelledby="faq-title">
+  <h2 id="faq-title" class="title">Questions, answered</h2>
+  <div class="tiles" data-reveal>
+    {
+      faqs.map((f, i) => (
+        <details name="faq" open={i === 0}>
+          <summary>
+            <span>{f.q}</span>
+            <span class="pm" aria-hidden="true" />
+          </summary>
+          <div class="ans">
+            <p>{f.a}</p>
+          </div>
+        </details>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .faq {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+    padding-block: var(--section);
+  }
+  .title {
+    grid-column: 1 / span 4;
+    position: sticky;
+    top: 96px;
+    font-size: var(--t-l);
+    line-height: 1;
+    letter-spacing: -0.035em;
+    font-weight: 600;
+  }
+  .tiles {
+    grid-column: 5 / span 8;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  details {
+    border-radius: var(--r);
+    background: var(--surface);
+    transition:
+      background-color 0.3s,
+      color 0.3s;
+  }
+  details:hover:not([open]) {
+    background: var(--surface-2);
+  }
+  details[open] {
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    min-height: 72px;
+    padding: 16px 24px;
+    font-size: 20px;
+    font-weight: 500;
+    cursor: pointer;
+    list-style: none;
+  }
+  summary::-webkit-details-marker {
+    display: none;
+  }
+  .pm {
+    position: relative;
+    flex: none;
+    width: 16px;
+    height: 16px;
+  }
+  .pm::before,
+  .pm::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 6.5px;
+    width: 16px;
+    height: 3px;
+    border-radius: 2px;
+    background: currentColor;
+    transition: transform 0.35s var(--ease-out);
+  }
+  .pm::after {
+    transform: rotate(90deg);
+  }
+  details[open] .pm::after {
+    transform: rotate(0deg);
+  }
+  .ans {
+    padding: 0 24px 24px;
+  }
+  .ans p {
+    max-width: 52ch;
+    font-size: 17px;
+  }
+  details::details-content {
+    block-size: 0;
+    overflow: hidden;
+    transition:
+      block-size 0.4s var(--ease-out),
+      content-visibility 0.4s allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+  }
+  @supports (interpolate-size: allow-keywords) {
+    .faq {
+      interpolate-size: allow-keywords;
+    }
+  }
+  @media (max-width: 900px) {
+    .title,
+    .tiles {
+      grid-column: 1 / -1;
+    }
+    .title {
+      position: static;
+      font-size: 9vw;
+      margin-bottom: 32px;
+    }
+    .tiles {
+      gap: 6px;
+    }
+    summary {
+      min-height: 64px;
+      font-size: 18px;
+      padding: 14px 20px;
+    }
+    .ans {
+      padding: 0 20px 20px;
+    }
+    .ans p {
+      font-size: 16px;
+    }
+  }
+</style>

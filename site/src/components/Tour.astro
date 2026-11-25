@@ -1,0 +1,288 @@
+---
+/**
+ * The product tour: the real app, filmed and photographed with a demo team, on one flat stage
+ * colour. One large picture at a time; the list beside it switches chapters.
+ */
+import Clip from './Clip.astro';
+import Shot from './Shot.astro';
+
+const chapters = [
+  {
+    id: 'live',
+    title: 'Live, on every screen',
+    text: 'Messages, reactions and “is typing” appear for everyone the moment they happen.',
+    clip: 'real-time',
+    label: 'Two people in #launch-q1 side by side: one types, the other sees it, and the message appears on both screens at once',
+  },
+  {
+    id: 'threads',
+    title: 'Threads keep it tidy',
+    text: 'Reply to one message without burying the channel, and @mention whoever needs to see it.',
+    clip: 'reply-in-thread',
+    label: 'Opening the replies under a post, mentioning a teammate and sending a reply in the thread',
+  },
+  {
+    id: 'search',
+    title: 'Find anything later',
+    text: 'Press Ctrl+K and search every channel and conversation you can see.',
+    clip: 'search',
+    label: 'Pressing Ctrl+K, searching for a word and opening the matching message',
+  },
+  {
+    id: 'files',
+    title: 'Share files and images',
+    text: 'Drop in a picture or a document. It shows right in the conversation.',
+    clip: 'share-a-file',
+    label: 'Attaching an image in #design, writing a caption and sending it',
+  },
+  {
+    id: 'admin',
+    title: 'Run it yourself',
+    text: 'People and roles, your logo and colour, email, the security log, Slack import and export.',
+    shot: 'admin-people-desktop',
+    label: 'Huddle admin settings: inviting someone, a pending invitation and the member list',
+  },
+];
+---
+
+<section class="tour" id="tour" aria-labelledby="tour-title">
+  <div class="wrap head" data-reveal>
+    <h2 id="tour-title" class="h2">See it working</h2>
+    <p class="soft">Recorded in a real Huddle, with a demo team.</p>
+  </div>
+  <div class="wrap body" data-tour>
+    <div class="screen" data-reveal>
+      {
+        chapters.map((c, i) => (
+          <div class="pane" id={`tour-${c.id}`} role="tabpanel" aria-labelledby={`tab-${c.id}`} data-pane={c.id} hidden={i > 0}>
+            {c.clip ? <Clip name={c.clip} label={c.label} /> : <Shot name={c.shot!} alt={c.label} sizes="(max-width: 1000px) 100vw, 66vw" />}
+          </div>
+        ))
+      }
+    </div>
+    <div class="chapters" role="tablist" aria-label="Tour chapters" aria-orientation="vertical" data-reveal>
+      {
+        chapters.map((c, i) => (
+          <button
+            class="chapter"
+            id={`tab-${c.id}`}
+            role="tab"
+            type="button"
+            aria-selected={i === 0 ? 'true' : 'false'}
+            aria-controls={`tour-${c.id}`}
+            tabindex={i === 0 ? 0 : -1}
+            data-tab={c.id}
+          >
+            <span class="t">{c.title}</span>
+            <span class="d">{c.text}</span>
+            <span class="bar" aria-hidden="true" />
+          </button>
+        ))
+      }
+    </div>
+  </div>
+</section>
+
+<style>
+  .tour {
+    background: var(--stage);
+    padding-block: 120px;
+  }
+  .head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 24px;
+    flex-wrap: wrap;
+    margin-bottom: 48px;
+  }
+  .head p {
+    color: color-mix(in srgb, var(--ink) 78%, var(--stage));
+  }
+  .body {
+    display: grid;
+    grid-template-columns: minmax(0, 8fr) minmax(0, 4fr);
+    gap: 32px;
+    align-items: start;
+  }
+  .screen {
+    position: relative;
+    border-radius: 12px;
+    overflow: hidden;
+    background: var(--bg);
+    aspect-ratio: 16 / 10;
+  }
+  .pane {
+    position: absolute;
+    inset: 0;
+  }
+  .pane[hidden] {
+    display: block;
+    visibility: hidden;
+    opacity: 0;
+  }
+  .pane:not([hidden]) {
+    animation: pane-in 0.6s var(--ease-out) both;
+  }
+  @keyframes pane-in {
+    from {
+      opacity: 0;
+      transform: scale(1.015);
+    }
+  }
+  .pane :global(video),
+  .pane :global(img),
+  .pane :global(.missing) {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: top left;
+  }
+  .chapters {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .chapter {
+    position: relative;
+    display: block;
+    width: 100%;
+    padding: 18px 20px 20px;
+    border: 0;
+    border-radius: var(--r);
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    overflow: hidden;
+    transition: background-color 0.25s;
+  }
+  .chapter:hover {
+    background: color-mix(in srgb, var(--bg) 30%, transparent);
+  }
+  .chapter[aria-selected='true'] {
+    background: var(--bg);
+  }
+  .t {
+    display: block;
+    font-size: 20px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .d {
+    display: block;
+    margin-top: 4px;
+    font-size: 16px;
+    color: color-mix(in srgb, var(--ink) 80%, var(--stage));
+  }
+  .chapter[aria-selected='true'] .d {
+    color: var(--muted);
+  }
+  .bar {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    height: 3px;
+    width: 100%;
+    background: var(--accent);
+    transform: scaleX(0);
+    transform-origin: left;
+  }
+  .chapter[aria-selected='true'] .bar {
+    animation: progress var(--dur, 9s) linear forwards;
+  }
+  .tour[data-paused] .bar {
+    animation-play-state: paused;
+  }
+  @keyframes progress {
+    to {
+      transform: scaleX(1);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .chapter[aria-selected='true'] .bar {
+      animation: none;
+      transform: scaleX(1);
+    }
+  }
+  @media (max-width: 1000px) {
+    .tour {
+      padding-block: 88px;
+    }
+    .body {
+      grid-template-columns: 1fr;
+    }
+    .head {
+      flex-direction: column;
+      gap: 8px;
+    }
+    .chapters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  @media (max-width: 600px) {
+    .chapters {
+      grid-template-columns: 1fr;
+    }
+    .chapter {
+      padding: 14px 16px 16px;
+    }
+  }
+</style>
+
+<script>
+  // Tabs that also advance by themselves (paused on hover, focus or when off screen).
+  const root = document.querySelector<HTMLElement>('[data-tour]');
+  const section = root?.closest<HTMLElement>('.tour');
+  if (root && section) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    let current = 0;
+    let visible = false;
+    let timer = 0;
+
+    function select(i: number, focus = false) {
+      current = (i + tabs.length) % tabs.length;
+      tabs.forEach((t, j) => {
+        const on = j === current;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        const pane = root!.querySelector<HTMLElement>(`[data-pane="${t.dataset.tab}"]`)!;
+        pane.hidden = !on;
+        const v = pane.querySelector('video');
+        if (v) {
+          if (on && visible && !reduced) {
+            v.currentTime = 0;
+            void v.play().catch(() => {});
+          } else v.pause();
+        }
+      });
+      if (focus) tabs[current]!.focus();
+            schedule();
+    }
+    function schedule() {
+      clearTimeout(timer);
+      if (reduced || !visible || section!.hasAttribute('data-paused')) return;
+      timer = window.setTimeout(() => select(current + 1), 9000);
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') (e.preventDefault(), select(current + 1, true));
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') (e.preventDefault(), select(current - 1, true));
+      });
+    });
+    const pause = (on: boolean) => {
+      section.toggleAttribute('data-paused', on);
+      schedule();
+    };
+    root.addEventListener('pointerenter', () => pause(true));
+    root.addEventListener('pointerleave', () => pause(false));
+    root.addEventListener('focusin', () => pause(true));
+    root.addEventListener('focusout', () => pause(false));
+    new IntersectionObserver(([e]) => {
+      visible = !!e?.isIntersecting;
+      select(current);
+    }, { threshold: 0.3 }).observe(root);
+  }
+</script>

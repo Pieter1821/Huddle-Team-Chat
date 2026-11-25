@@ -1,0 +1,134 @@
+---
+/**
+ * The close: the app's first screen, already open on an accent field. The fields take typing;
+ * the button is the page's one action and leads to the deploy screen.
+ */
+import { DEPLOY_URL } from '../lib/links';
+---
+
+<section class="cta" aria-labelledby="cta-title">
+  <div class="words" data-reveal>
+    <h2 id="cta-title">Make it yours.</h2>
+    <p>
+      Press Deploy, sign in with your setup key, and this is the first screen you’ll see. About ten minutes
+      from start to your first message.
+    </p>
+  </div>
+  <div class="dialog" data-ui data-cta data-reveal>
+    <img src="/brand/huddle-mark-64.png" alt="" width="40" height="40" />
+    <p class="d-title">Set up your workspace</p>
+    <p class="d-sub">Two things, and your team’s chat is ready. You can change both later.</p>
+    <label class="ui-field"><span>Workspace name</span><input class="ui-input" name="ws" maxlength="40" value="Northwind Studio" autocomplete="off" /></label>
+    <label class="ui-field"><span>Your name</span><input class="ui-input" name="me" maxlength="40" placeholder="How your team will see you" autocomplete="name" /></label>
+    <a class="ui-btn go" href={DEPLOY_URL} data-go>Deploy Huddle for <span data-ws>Northwind Studio</span></a>
+  </div>
+</section>
+
+<style>
+  .cta {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    min-height: 90svh;
+    padding: 40px var(--m);
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .words {
+    grid-column: 1 / span 6;
+    align-self: end;
+  }
+  h2 {
+    font-size: var(--t-xl);
+    line-height: 0.92;
+    letter-spacing: -0.045em;
+    font-weight: 600;
+    max-width: 6ch;
+  }
+  .words p {
+    margin-top: 24px;
+    max-width: 40ch;
+    font-size: 17px;
+  }
+  .dialog {
+    grid-column: 8 / span 4;
+    align-self: center;
+    width: 100%;
+    max-width: 440px;
+    padding: 32px;
+    background: var(--surface);
+    box-shadow:
+      inset 0 0 0 1px var(--edge),
+      0 30px 80px rgb(0 0 0 / 0.35);
+  }
+  .d-title {
+    margin-top: 18px;
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .d-sub {
+    margin-top: 4px;
+    color: var(--muted);
+  }
+  .go {
+    width: 100%;
+    margin-top: 24px;
+    height: 46px;
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition:
+      transform 0.25s var(--ease-out),
+      background-color 0.2s;
+  }
+  .go:hover {
+    background: #12c49e;
+  }
+  .go:active {
+    transform: scale(0.98);
+  }
+  .go span {
+    display: inline-block;
+    margin-left: 0.3em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
+    vertical-align: bottom;
+  }
+  @media (max-width: 900px) {
+    .cta {
+      display: flex;
+      flex-direction: column;
+      gap: 40px;
+      min-height: 84svh;
+      padding: 56px 16px 16px;
+    }
+    h2 {
+      font-size: 13vw;
+    }
+    .words p {
+      font-size: 16px;
+    }
+    .dialog {
+      max-width: none;
+      margin-top: auto;
+      padding: 24px;
+    }
+    .go {
+      height: 52px;
+    }
+  }
+</style>
+
+<script>
+  const d = document.querySelector<HTMLElement>('[data-cta]');
+  if (d) {
+    const ws = d.querySelector<HTMLInputElement>('input[name="ws"]')!;
+    const out = d.querySelector<HTMLElement>('[data-ws]')!;
+    ws.addEventListener('input', () => {
+      out.textContent = ws.value.trim() || 'your team';
+    });
+  }
+</script>

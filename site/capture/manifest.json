@@ -1,0 +1,452 @@
+{
+  "generatedAt": "2026-11-25T04:41:02.852Z",
+  "workspace": "Northwind Studio",
+  "files": [
+    {
+      "name": "authenticator-sign-in.jpg",
+      "type": "poster",
+      "path": "site/public/media/authenticator-sign-in.jpg",
+      "alt": "Signing in with an email address and the 6-digit code from an authenticator app, then landing in the workspace.",
+      "viewport": "1440x900",
+      "feature": "Authenticator app sign-in"
+    },
+    {
+      "name": "authenticator-sign-in.mp4",
+      "type": "video",
+      "path": "site/public/media/authenticator-sign-in.mp4",
+      "alt": "Signing in with an email address and the 6-digit code from an authenticator app, then landing in the workspace.",
+      "viewport": "1440x900",
+      "feature": "Authenticator app sign-in",
+      "seconds": 13.2
+    },
+    {
+      "name": "authenticator-sign-in.webm",
+      "type": "video",
+      "path": "site/public/media/authenticator-sign-in.webm",
+      "alt": "Signing in with an email address and the 6-digit code from an authenticator app, then landing in the workspace.",
+      "viewport": "1440x900",
+      "feature": "Authenticator app sign-in",
+      "seconds": 13.2
+    },
+    {
+      "name": "invite-someone.jpg",
+      "type": "poster",
+      "path": "site/public/media/invite-someone.jpg",
+      "alt": "Inviting a new teammate by email from Admin › People and copying their one-time invitation link.",
+      "viewport": "1440x900",
+      "feature": "Invitations"
+    },
+    {
+      "name": "invite-someone.mp4",
+      "type": "video",
+      "path": "site/public/media/invite-someone.mp4",
+      "alt": "Inviting a new teammate by email from Admin › People and copying their one-time invitation link.",
+      "viewport": "1440x900",
+      "feature": "Invitations",
+      "seconds": 8.6
+    },
+    {
+      "name": "invite-someone.webm",
+      "type": "video",
+      "path": "site/public/media/invite-someone.webm",
+      "alt": "Inviting a new teammate by email from Admin › People and copying their one-time invitation link.",
+      "viewport": "1440x900",
+      "feature": "Invitations",
+      "seconds": 8.6
+    },
+    {
+      "name": "owner-setup.jpg",
+      "type": "poster",
+      "path": "site/public/media/owner-setup.jpg",
+      "alt": "Setting up a new Huddle: the owner enters the setup key, adds an authenticator app, names the workspace and lands in #general.",
+      "viewport": "1440x900",
+      "feature": "First-run owner setup"
+    },
+    {
+      "name": "owner-setup.mp4",
+      "type": "video",
+      "path": "site/public/media/owner-setup.mp4",
+      "alt": "Setting up a new Huddle: the owner enters the setup key, adds an authenticator app, names the workspace and lands in #general.",
+      "viewport": "1440x900",
+      "feature": "First-run owner setup",
+      "seconds": 12.5
+    },
+    {
+      "name": "owner-setup.webm",
+      "type": "video",
+      "path": "site/public/media/owner-setup.webm",
+      "alt": "Setting up a new Huddle: the owner enters the setup key, adds an authenticator app, names the workspace and lands in #general.",
+      "viewport": "1440x900",
+      "feature": "First-run owner setup",
+      "seconds": 12.5
+    },
+    {
+      "name": "real-time.jpg",
+      "type": "poster",
+      "path": "site/public/media/real-time.jpg",
+      "alt": "Two people in #launch-q1 side by side: one types (the other sees “is typing…”), the message appears live, and the reaction shows up on both screens.",
+      "viewport": "2 × 952x800, side by side",
+      "feature": "Real-time messages, typing indicator and reactions"
+    },
+    {
+      "name": "real-time.mp4",
+      "type": "video",
+      "path": "site/public/media/real-time.mp4",
+      "alt": "Two people in #launch-q1 side by side: one types (the other sees “is typing…”), the message appears live, and the reaction shows up on both screens.",
+      "viewport": "2 × 952x800, side by side",
+      "feature": "Real-time messages, typing indicator and reactions",
+      "seconds": 12.3
+    },
+    {
+      "name": "real-time.webm",
+      "type": "video",
+      "path": "site/public/media/real-time.webm",
+      "alt": "Two people in #launch-q1 side by side: one types (the other sees “is typing…”), the message appears live, and the reaction shows up on both screens.",
+      "viewport": "2 × 952x800, side by side",
+      "feature": "Real-time messages, typing indicator and reactions",
+      "seconds": 12.3
+    },
+    {
+      "name": "reply-in-thread.jpg",
+      "type": "poster",
+      "path": "site/public/media/reply-in-thread.jpg",
+      "alt": "Opening the replies under a post, mentioning Priya from the @ list and sending a reply in the thread.",
+      "viewport": "1440x900",
+      "feature": "Threads and @mentions"
+    },
+    {
+      "name": "reply-in-thread.mp4",
+      "type": "video",
+      "path": "site/public/media/reply-in-thread.mp4",
+      "alt": "Opening the replies under a post, mentioning Priya from the @ list and sending a reply in the thread.",
+      "viewport": "1440x900",
+      "feature": "Threads and @mentions",
+      "seconds": 13.3
+    },
+    {
+      "name": "reply-in-thread.webm",
+      "type": "video",
+      "path": "site/public/media/reply-in-thread.webm",
+      "alt": "Opening the replies under a post, mentioning Priya from the @ list and sending a reply in the thread.",
+      "viewport": "1440x900",
+      "feature": "Threads and @mentions",
+      "seconds": 13.3
+    },
+    {
+      "name": "search.jpg",
+      "type": "poster",
+      "path": "site/public/media/search.jpg",
+      "alt": "Pressing Ctrl+K, searching for “safari” and opening the matching message in #engineering.",
+      "viewport": "1440x900",
+      "feature": "Search"
+    },
+    {
+      "name": "search.mp4",
+      "type": "video",
+      "path": "site/public/media/search.mp4",
+      "alt": "Pressing Ctrl+K, searching for “safari” and opening the matching message in #engineering.",
+      "viewport": "1440x900",
+      "feature": "Search",
+      "seconds": 7
+    },
+    {
+      "name": "search.webm",
+      "type": "video",
+      "path": "site/public/media/search.webm",
+      "alt": "Pressing Ctrl+K, searching for “safari” and opening the matching message in #engineering.",
+      "viewport": "1440x900",
+      "feature": "Search",
+      "seconds": 7
+    },
+    {
+      "name": "share-a-file.jpg",
+      "type": "poster",
+      "path": "site/public/media/share-a-file.jpg",
+      "alt": "Attaching an image in #design, writing a caption and sending it: the image appears in the channel.",
+      "viewport": "1440x900",
+      "feature": "Sharing files"
+    },
+    {
+      "name": "share-a-file.mp4",
+      "type": "video",
+      "path": "site/public/media/share-a-file.mp4",
+      "alt": "Attaching an image in #design, writing a caption and sending it: the image appears in the channel.",
+      "viewport": "1440x900",
+      "feature": "Sharing files",
+      "seconds": 12.7
+    },
+    {
+      "name": "share-a-file.webm",
+      "type": "video",
+      "path": "site/public/media/share-a-file.webm",
+      "alt": "Attaching an image in #design, writing a caption and sending it: the image appears in the channel.",
+      "viewport": "1440x900",
+      "feature": "Sharing files",
+      "seconds": 12.7
+    },
+    {
+      "name": "admin-branding-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-branding-desktop.png",
+      "alt": "Admin › Workspace: the workspace name, an uploaded logo and a custom accent colour applied across the app.",
+      "viewport": "1440x900 @2x",
+      "feature": "Branding: logo and accent colour"
+    },
+    {
+      "name": "admin-email-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-email-desktop.png",
+      "alt": "Admin › Email: step-by-step instructions for sending invitations and summaries from a Gmail account with an app password.",
+      "viewport": "1440x900 @2x",
+      "feature": "Optional email through Gmail"
+    },
+    {
+      "name": "admin-export-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-export-desktop.png",
+      "alt": "Admin › Export: download everything in the workspace as a zip file.",
+      "viewport": "1440x900 @2x",
+      "feature": "Export your data"
+    },
+    {
+      "name": "admin-import-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-import-desktop.png",
+      "alt": "Admin › Import: a Slack export checked before importing, with counts of the people, channels and messages it holds.",
+      "viewport": "1440x900 @2x",
+      "feature": "Import from Slack"
+    },
+    {
+      "name": "admin-members-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-members-desktop.png",
+      "alt": "The member list in Admin › People: each person’s role, with options to change it or deactivate them.",
+      "viewport": "1440x900 @2x",
+      "feature": "Admin: people, roles and invitations"
+    },
+    {
+      "name": "admin-people-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-people-desktop.png",
+      "alt": "Admin › People: invite someone by email with a role, a pending invitation, and the members with their roles.",
+      "viewport": "1440x900 @2x",
+      "feature": "Admin: people, roles and invitations"
+    },
+    {
+      "name": "admin-security-log-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-security-log-desktop.png",
+      "alt": "Admin › Security log: who invited whom, created webhooks and changed settings, and when.",
+      "viewport": "1440x900 @2x",
+      "feature": "Security log"
+    },
+    {
+      "name": "admin-usage-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-usage-desktop.png",
+      "alt": "Admin › Usage: how much of the database and file storage the workspace uses.",
+      "viewport": "1440x900 @2x",
+      "feature": "Usage against the free tier"
+    },
+    {
+      "name": "admin-webhooks-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/admin-webhooks-desktop.png",
+      "alt": "Admin › Webhooks: a Deploy bot webhook posting build results into #engineering, and a form to add another.",
+      "viewport": "1440x900 @2x",
+      "feature": "Incoming webhooks"
+    },
+    {
+      "name": "browse-channels-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/browse-channels-desktop.png",
+      "alt": "Browsing the workspace’s public channels, each with its topic and member count.",
+      "viewport": "1440x900 @2x",
+      "feature": "Public and private channels"
+    },
+    {
+      "name": "channel-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/channel-desktop.png",
+      "alt": "Huddle on a desktop: the #design channel with a shared mockup, reactions and a thread, next to the list of channels and direct messages.",
+      "viewport": "1440x900 @2x",
+      "feature": "Channels, messages, reactions and files"
+    },
+    {
+      "name": "channel-details-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/channel-details-desktop.png",
+      "alt": "The details of #design: its topic, how much it notifies you, and the people in it.",
+      "viewport": "1440x900 @2x",
+      "feature": "Channel details and notification levels"
+    },
+    {
+      "name": "channel-phone",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/channel-phone.png",
+      "alt": "A channel on a phone: messages with reactions, a shared design image and the message box.",
+      "viewport": "390x844 @3x (phone)",
+      "feature": "Channels, messages, reactions and files"
+    },
+    {
+      "name": "engineering-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/engineering-desktop.png",
+      "alt": "The #engineering channel: build results posted by a webhook, a SQL snippet in a code block, and a mention.",
+      "viewport": "1440x900 @2x",
+      "feature": "Code formatting and webhook messages"
+    },
+    {
+      "name": "group-dm-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/group-dm-desktop.png",
+      "alt": "A group direct message between three people planning a surprise for a colleague.",
+      "viewport": "1440x900 @2x",
+      "feature": "Direct messages"
+    },
+    {
+      "name": "invitation-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/invitation-desktop.png",
+      "alt": "An invitation link opened: “Join Northwind Studio”, with who sent it and the invited email filled in.",
+      "viewport": "1440x900 @2x",
+      "feature": "Invitations"
+    },
+    {
+      "name": "mentions-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/mentions-desktop.png",
+      "alt": "Writing a message and typing @pr: a list suggests Priya Raman to mention.",
+      "viewport": "1440x900 @2x",
+      "feature": "@mentions"
+    },
+    {
+      "name": "new-message-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/new-message-desktop.png",
+      "alt": "Starting a direct message: a list of everyone in the workspace to pick from.",
+      "viewport": "1440x900 @2x",
+      "feature": "Direct messages"
+    },
+    {
+      "name": "offline-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/offline-desktop.png",
+      "alt": "Huddle’s offline page, shown instead of the browser’s error when there is no connection.",
+      "viewport": "1440x900 @2x",
+      "feature": "Installable app (service worker)"
+    },
+    {
+      "name": "owner-setup-authenticator-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/owner-setup-authenticator-desktop.png",
+      "alt": "Setting up an authenticator app: a QR code to scan and a box for the 6-digit code it shows.",
+      "viewport": "1440x900 @2x",
+      "feature": "Authenticator app sign-in"
+    },
+    {
+      "name": "owner-setup-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/owner-setup-desktop.png",
+      "alt": "The first screen of a new Huddle: the owner enters their email and the setup key to start.",
+      "viewport": "1440x900 @2x",
+      "feature": "First-run owner setup"
+    },
+    {
+      "name": "private-channel-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/private-channel-desktop.png",
+      "alt": "A private channel, marked with a lock, where four people plan hiring and budget.",
+      "viewport": "1440x900 @2x",
+      "feature": "Public and private channels"
+    },
+    {
+      "name": "search-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/search-desktop.png",
+      "alt": "Search open over the app: results for “staging” from several channels, with the matching word highlighted.",
+      "viewport": "1440x900 @2x",
+      "feature": "Search"
+    },
+    {
+      "name": "settings-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/settings-desktop.png",
+      "alt": "Your settings: profile, authenticator app turned on, notifications on this device and an Install Huddle button.",
+      "viewport": "1440x900 @2x",
+      "feature": "Personal settings: authenticator app, notifications, install as an app"
+    },
+    {
+      "name": "settings-email-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/settings-email-desktop.png",
+      "alt": "Email notification settings: a daily summary of missed mentions and messages, the wait before emailing, the time zone and a pause button.",
+      "viewport": "1440x900 @2x",
+      "feature": "Email summaries and do not disturb"
+    },
+    {
+      "name": "settings-phone",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/settings-phone.png",
+      "alt": "Your settings on a phone: profile, authenticator app and notifications for this device.",
+      "viewport": "390x844 @3x (phone)",
+      "feature": "Personal settings"
+    },
+    {
+      "name": "sidebar-phone",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/sidebar-phone.png",
+      "alt": "Huddle on a phone: the list of channels and direct messages, with unread conversations in bold and a mention count.",
+      "viewport": "390x844 @3x (phone)",
+      "feature": "Channels, direct messages and unread badges"
+    },
+    {
+      "name": "signin-authenticator-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/signin-authenticator-desktop.png",
+      "alt": "Signing in with an authenticator app: work email and the 6-digit code from the app.",
+      "viewport": "1440x900 @2x",
+      "feature": "Authenticator app sign-in"
+    },
+    {
+      "name": "signin-branded-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/signin-branded-desktop.png",
+      "alt": "The sign-in page with the team’s own logo and accent colour.",
+      "viewport": "1440x900 @2x",
+      "feature": "Branding: logo and accent colour"
+    },
+    {
+      "name": "signin-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/signin-desktop.png",
+      "alt": "The sign-in page: enter your work email to get a one-time code, or use an authenticator app.",
+      "viewport": "1440x900 @2x",
+      "feature": "Passwordless sign-in"
+    },
+    {
+      "name": "signin-phone",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/signin-phone.png",
+      "alt": "Signing in on a phone: a work email box and a button that emails a one-time code.",
+      "viewport": "390x844 @3x (phone)",
+      "feature": "Passwordless sign-in"
+    },
+    {
+      "name": "thread-desktop",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/thread-desktop.png",
+      "alt": "A thread open beside the channel: feedback on a booking flow mockup, with a mention.",
+      "viewport": "1440x900 @2x",
+      "feature": "Threads"
+    },
+    {
+      "name": "thread-phone",
+      "type": "screenshot",
+      "path": "site/src/assets/screens/thread-phone.png",
+      "alt": "A thread on a phone: the original post with its image and five replies underneath.",
+      "viewport": "390x844 @3x (phone)",
+      "feature": "Threads"
+    }
+  ]
+}
