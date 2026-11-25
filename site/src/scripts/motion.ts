@@ -69,28 +69,6 @@ function counters() {
   els.forEach((el) => io.observe(el));
 }
 
-/**
- * Scroll progress for held (sticky) stages: sets --p (0..1) on the element and calls back with it.
- * The page's ordinary scrolling drives it; nothing is hijacked.
- */
-export function onHold(el: HTMLElement, cb: (p: number) => void) {
-  let raf = 0;
-  const update = () => {
-    raf = 0;
-    const r = el.getBoundingClientRect();
-    const span = r.height - innerHeight;
-    const p = span > 0 ? Math.min(1, Math.max(0, -r.top / span)) : 0;
-    el.style.setProperty('--p', p.toFixed(4));
-    cb(p);
-  };
-  const ask = () => {
-    if (!raf) raf = requestAnimationFrame(update);
-  };
-  addEventListener('scroll', ask, { passive: true });
-  addEventListener('resize', ask);
-  update();
-}
-
 /** The navigation bar picks up a tone step once the page has scrolled. */
 function navTone() {
   const nav = document.querySelector<HTMLElement>('[data-nav]');
