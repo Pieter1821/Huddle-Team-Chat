@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-25T04:41:02.852Z",
+  "generatedAt": "2026-11-25T16:37:05.010Z",
   "workspace": "Northwind Studio",
   "files": [
     {
@@ -17,7 +17,7 @@
       "alt": "Signing in with an email address and the 6-digit code from an authenticator app, then landing in the workspace.",
       "viewport": "1440x900",
       "feature": "Authenticator app sign-in",
-      "seconds": 13.2
+      "seconds": 10.9
     },
     {
       "name": "authenticator-sign-in.webm",
@@ -26,7 +26,7 @@
       "alt": "Signing in with an email address and the 6-digit code from an authenticator app, then landing in the workspace.",
       "viewport": "1440x900",
       "feature": "Authenticator app sign-in",
-      "seconds": 13.2
+      "seconds": 10.9
     },
     {
       "name": "invite-someone.jpg",
@@ -43,7 +43,7 @@
       "alt": "Inviting a new teammate by email from Admin › People and copying their one-time invitation link.",
       "viewport": "1440x900",
       "feature": "Invitations",
-      "seconds": 8.6
+      "seconds": 8.4
     },
     {
       "name": "invite-someone.webm",
@@ -52,7 +52,7 @@
       "alt": "Inviting a new teammate by email from Admin › People and copying their one-time invitation link.",
       "viewport": "1440x900",
       "feature": "Invitations",
-      "seconds": 8.6
+      "seconds": 8.4
     },
     {
       "name": "owner-setup.jpg",
@@ -69,7 +69,7 @@
       "alt": "Setting up a new Huddle: the owner enters the setup key, adds an authenticator app, names the workspace and lands in #general.",
       "viewport": "1440x900",
       "feature": "First-run owner setup",
-      "seconds": 12.5
+      "seconds": 11.8
     },
     {
       "name": "owner-setup.webm",
@@ -78,7 +78,7 @@
       "alt": "Setting up a new Huddle: the owner enters the setup key, adds an authenticator app, names the workspace and lands in #general.",
       "viewport": "1440x900",
       "feature": "First-run owner setup",
-      "seconds": 12.5
+      "seconds": 11.8
     },
     {
       "name": "real-time.jpg",
@@ -121,7 +121,7 @@
       "alt": "Opening the replies under a post, mentioning Priya from the @ list and sending a reply in the thread.",
       "viewport": "1440x900",
       "feature": "Threads and @mentions",
-      "seconds": 13.3
+      "seconds": 13.5
     },
     {
       "name": "reply-in-thread.webm",
@@ -130,7 +130,7 @@
       "alt": "Opening the replies under a post, mentioning Priya from the @ list and sending a reply in the thread.",
       "viewport": "1440x900",
       "feature": "Threads and @mentions",
-      "seconds": 13.3
+      "seconds": 13.5
     },
     {
       "name": "search.jpg",
@@ -147,7 +147,7 @@
       "alt": "Pressing Ctrl+K, searching for “safari” and opening the matching message in #engineering.",
       "viewport": "1440x900",
       "feature": "Search",
-      "seconds": 7
+      "seconds": 6.9
     },
     {
       "name": "search.webm",
@@ -156,7 +156,7 @@
       "alt": "Pressing Ctrl+K, searching for “safari” and opening the matching message in #engineering.",
       "viewport": "1440x900",
       "feature": "Search",
-      "seconds": 7
+      "seconds": 6.9
     },
     {
       "name": "share-a-file.jpg",
@@ -173,7 +173,7 @@
       "alt": "Attaching an image in #design, writing a caption and sending it: the image appears in the channel.",
       "viewport": "1440x900",
       "feature": "Sharing files",
-      "seconds": 12.7
+      "seconds": 12.5
     },
     {
       "name": "share-a-file.webm",
@@ -182,7 +182,7 @@
       "alt": "Attaching an image in #design, writing a caption and sending it: the image appears in the channel.",
       "viewport": "1440x900",
       "feature": "Sharing files",
-      "seconds": 12.7
+      "seconds": 12.5
     },
     {
       "name": "admin-branding-desktop",

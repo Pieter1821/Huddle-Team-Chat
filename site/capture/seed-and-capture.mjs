@@ -209,26 +209,42 @@ async function call(client, method, path, data, headers) {
 
 const base = () => ({ baseURL: ORIGIN, locale: 'en-US', timezoneId: TIME_ZONE, colorScheme: 'dark' });
 
+// What a visitor would see on a real install: links on the team's own address, not this test
+// server's, and the Email page as it reads in production (not "printed in the terminal").
+const PUBLIC_ORIGIN = 'https://chat.northwind.studio';
+const LINK_ROUTES = /\/api\/(invitations|members\/[^/]+\/authenticator-reset|conversations\/[^/]+\/webhooks|admin\/email)(\?|$)/;
+async function asProduction(context) {
+  await context.route(LINK_ROUTES, async (route) => {
+    const res = await route.fetch();
+    let body = (await res.text()).replaceAll(ORIGIN, PUBLIC_ORIGIN);
+    if (/\/api\/admin\/email(\?|$)/.test(route.request().url())) body = body.replace('"local":true', '"local":false');
+    await route.fulfill({ response: res, body });
+  });
+  return context;
+}
+
 /** Contexts for screenshots (sharp, no pointer), phones, and recordings (with a pointer). */
 async function desktop(storageState) {
-  return browser.newContext({ ...base(), storageState, viewport: DESKTOP, deviceScaleFactor: 2 });
+  return asProduction(await browser.newContext({ ...base(), storageState, viewport: DESKTOP, deviceScaleFactor: 2 }));
 }
 async function phone(storageState) {
-  return browser.newContext({
-    ...base(),
-    storageState,
-    viewport: PHONE,
-    deviceScaleFactor: 3,
-    isMobile: true,
-    hasTouch: true,
-    userAgent: PHONE_UA,
-  });
+  return asProduction(
+    await browser.newContext({
+      ...base(),
+      storageState,
+      viewport: PHONE,
+      deviceScaleFactor: 3,
+      isMobile: true,
+      hasTouch: true,
+      userAgent: PHONE_UA,
+    }),
+  );
 }
 async function film(storageState, viewport = DESKTOP) {
   const context = await browser.newContext({ ...base(), storageState, viewport, deviceScaleFactor: 1 });
   await context.addInitScript({ content: CURSOR_SCRIPT });
   await context.grantPermissions(['clipboard-read', 'clipboard-write'], { origin: ORIGIN });
-  return context;
+  return asProduction(context);
 }
 
 const nav = (page) => page.getByRole('navigation', { name: 'Conversations' });
@@ -755,6 +771,7 @@ async function captureDesktop(state) {
   });
 
   await page.goto('/admin/email');
+  await page.getByText('Not set up. Invitations are shared as links').waitFor();
   await page.getByText('Set up email (about 5 minutes)').click();
   await page.getByText('myaccount.google.com/apppasswords').waitFor();
   await shot(page, 'admin-email', {
