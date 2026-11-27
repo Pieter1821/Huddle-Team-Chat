@@ -6,7 +6,7 @@ import sitemap from '@astrojs/sitemap';
 import react from '@astrojs/react';
 
 export default defineConfig({
-  site: process.env.SITE_URL ?? 'https://huddle-site.offscreen.workers.dev',
+  site: process.env.SITE_URL ?? 'https://huddlechat.co.za',
   trailingSlash: 'never',
   build: { format: 'file' },
   integrations: [mdx(), sitemap(), react()],

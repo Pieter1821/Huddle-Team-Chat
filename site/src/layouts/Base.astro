@@ -10,7 +10,8 @@ interface Props {
   image?: string;
 }
 const { title, description, active = 'home', image = '/og.jpg' } = Astro.props;
-const canonical = new URL(Astro.url.pathname, Astro.site);
+// Clean addresses: /docs/deploy, not /docs/deploy.html; / for the home page.
+const canonical = new URL(Astro.url.pathname.replace(/(index)?\.html$/, ''), Astro.site);
 const ogImage = new URL(image, Astro.site);
 const year = new Date().getFullYear();
 ---
