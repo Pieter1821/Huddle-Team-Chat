@@ -1,0 +1,163 @@
+---
+/**
+ * A day in Huddle: a walkthrough of one team's day, told with real screenshots of a demo
+ * workspace. The steps scroll; the picture for the step you're reading holds still beside them.
+ */
+import { getImage } from 'astro:assets';
+import StickyScroll, { type Moment } from './react/StickyScroll';
+import { screen } from '../lib/media';
+
+const day = [
+  { time: '8:40', name: 'sidebar-phone', phone: true, title: 'Catch up on the way in', text: 'Open Huddle on your phone. Chats with something new are in bold and show a count, so you know where to look first.', alt: 'Huddle on a phone: the list of channels and direct messages, with unread ones in bold' },
+  { time: '9:15', name: 'channel-desktop', title: 'Share work with the team', text: 'Leila posts the new booking flow in #design. People react with an emoji instead of writing “looks good” five times.', alt: 'The #design channel with a shared mockup, emoji reactions and a link to five replies' },
+  { time: '10:30', name: 'thread-desktop', title: 'Talk details in a thread', text: 'Feedback goes into a thread under the post, so the channel stays easy to read for everyone else.', alt: 'A thread open beside the channel with feedback on the booking flow' },
+  { time: '12:00', name: 'group-dm-desktop', title: 'A quiet word with a few people', text: 'Three colleagues plan a surprise in a group message. Only the people in it can see it.', alt: 'A group direct message between three people planning a surprise for a colleague' },
+  { time: '14:00', name: 'private-channel-desktop', title: 'Keep sensitive things private', text: 'Hiring and budget talk lives in a private channel. People who aren’t in it can’t see it or find it in search.', alt: 'A private channel marked with a lock, where four people plan hiring and budget' },
+  { time: '15:30', name: 'engineering-desktop', title: 'Let other tools report in', text: 'Build results and website checks post themselves into #engineering, so nobody has to copy and paste them.', alt: 'The #engineering channel with build results posted automatically and a code snippet' },
+  { time: '16:45', name: 'search-desktop', title: 'Find last week’s decision', text: 'Press Ctrl+K, type a word and jump straight to the message. Every channel you can see is searched.', alt: 'Search open over the app with results from several channels' },
+  { time: '18:00', name: 'settings-email-desktop', title: 'Switch off for the evening', text: 'Pause notifications for the night. If you miss a mention, Huddle can send one short email summary instead of a dozen pings.', alt: 'Email notification settings with a daily summary of missed mentions and messages' },
+];
+
+const moments: Moment[] = [];
+for (const d of day) {
+  const img = screen(d.name);
+  if (!img) continue;
+  const out = await getImage({ src: img, width: Math.min(img.width, d.phone ? 900 : 1800), format: 'webp', quality: 84 });
+  moments.push({ time: d.time, title: d.title, text: d.text, img: out.src, alt: d.alt, phone: d.phone });
+}
+---
+
+<section class="journey" id="day" aria-labelledby="day-title">
+  <div class="wrap head" data-reveal>
+    <h2 id="day-title" class="h2">A day in Huddle</h2>
+    <p class="soft">Follow one team from the first coffee to switching off. Every picture is the real app.</p>
+  </div>
+  <div class="wrap">
+    <StickyScroll client:visible moments={moments} />
+  </div>
+</section>
+
+<style>
+  .journey {
+    padding-block: var(--section);
+  }
+  .head {
+    max-width: 880px;
+    margin-bottom: 24px;
+  }
+  .head p {
+    margin-top: 16px;
+    font-size: 19px;
+  }
+  .journey :global(.ss) {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+    gap: 56px;
+  }
+  .journey :global(.ss-step) {
+    min-height: 72vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 40px;
+    opacity: 0.45;
+    transition: opacity 0.5s var(--ease-out);
+  }
+  .journey :global(.ss-step.on) {
+    opacity: 1;
+  }
+  .journey :global(.ss-time) {
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+    margin-right: 0.15em;
+  }
+  .journey :global(.ss-title) {
+    font-size: clamp(28px, 2.8vw, 45px);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    font-weight: 600;
+  }
+  .journey :global(.ss-text) {
+    margin-top: 16px;
+    max-width: 40ch;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+  .journey :global(.ss-inline) {
+    display: none;
+  }
+  .journey :global(.ss-stage) {
+    position: sticky;
+    top: calc(var(--nav-h) + 6vh);
+    align-self: start;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .journey :global(.ss-frame) {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 11;
+    max-height: calc(100svh - var(--nav-h) - 12vh - 22px);
+    border-radius: 22px;
+    background: var(--stage);
+    overflow: hidden;
+  }
+  .journey :global(.ss-img) {
+    position: absolute;
+    inset: 28px;
+    width: calc(100% - 56px);
+    height: calc(100% - 56px);
+    object-fit: contain;
+  }
+  .journey :global(.ss-dots) {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+  .journey :global(.ss-dots span) {
+    width: 6px;
+    height: 6px;
+    border-radius: 900px;
+    background: var(--surface-2);
+    transition:
+      width 0.4s var(--ease-out),
+      background-color 0.4s;
+  }
+  .journey :global(.ss-dots span.on) {
+    width: 28px;
+    background: var(--accent);
+  }
+  @media (max-width: 900px) {
+    .journey :global(.ss) {
+      display: block;
+    }
+    .journey :global(.ss-stage) {
+      display: none;
+    }
+    .journey :global(.ss-step) {
+      min-height: 0;
+      padding-block: 36px;
+      opacity: 1;
+    }
+    .journey :global(.ss-text) {
+      font-size: 17px;
+    }
+    .journey :global(.ss-inline) {
+      display: block;
+      width: 100%;
+      height: auto;
+      margin-top: 20px;
+      border-radius: 12px;
+      background: var(--surface);
+    }
+    .journey :global(.ss-inline.phone) {
+      width: min(300px, 80%);
+      border-radius: 22px;
+    }
+    .head p {
+      font-size: 17px;
+    }
+  }
+</style>

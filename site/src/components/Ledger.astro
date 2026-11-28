@@ -1,0 +1,221 @@
+---
+/**
+ * What it costs: the free plan's allowance set like a ledger, aligned on the decimal point, and
+ * a small calculator that estimates how much of the daily allowance a team would use.
+ */
+const rows = [
+  { whole: '0', dec: '.00', count: 0, caption: 'dollars per person, per month. Huddle is free and has no paid version.' },
+  { whole: '100,000', dec: '', count: 100000, caption: 'actions a day, free on Cloudflare: sending, opening a channel, searching. If a team reaches a limit, it’s usually this one.' },
+  { whole: '5', dec: '', count: 5, caption: 'GB of space for messages. That’s millions of them.' },
+  { whole: '10', dec: '', count: 10, caption: 'GB of space for shared files, free every month.' },
+  { whole: '60', dec: '', count: 60, caption: 'messages a minute per person at most, so nobody floods a channel by accident.' },
+];
+---
+
+<section class="ledger wrap" id="cost" aria-labelledby="ledger-title">
+  <div class="left">
+    <h2 id="ledger-title" class="h2" data-reveal>
+      <span class="soft">Free to run,</span> <span>for most teams.</span>
+    </h2>
+    <form class="calc" data-calc data-reveal onsubmit="return false">
+      <p class="calc-title">Will your team fit?</p>
+      <label>
+        <span>People <output data-out="people">25</output></span>
+        <input type="range" min="2" max="300" step="1" value="25" name="people" />
+      </label>
+      <label>
+        <span>Messages each a day <output data-out="msgs">40</output></span>
+        <input type="range" min="5" max="200" step="5" value="40" name="msgs" />
+      </label>
+      <div class="meter" aria-hidden="true"><span data-meter></span></div>
+      <p class="result" aria-live="polite" data-result>
+        About <b>8,000</b> actions a day: <b>8%</b> of the free allowance.
+      </p>
+      <p class="note">A rough estimate. Once you’re running, Admin › Usage shows your real numbers.</p>
+    </form>
+  </div>
+  <ol class="figs" role="list" aria-label="Cloudflare free plan allowance">
+    {
+      rows.map((r) => (
+        <li class="fig" data-reveal>
+          <span class="whole" data-count={r.count > 0 ? r.count : undefined}>{r.whole}</span>
+          <span class="dec">{r.dec}</span>
+          <span class="cap">{r.caption}</span>
+        </li>
+      ))
+    }
+  </ol>
+</section>
+
+<style>
+  .ledger {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    padding-block: var(--section);
+    align-items: center;
+  }
+  .left {
+    grid-column: 1 / span 5;
+  }
+  .figs {
+    grid-column: 6 / span 7;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .fig {
+    display: grid;
+    grid-template-columns: 6.3ch 2.4ch minmax(0, 1fr);
+    align-items: baseline;
+    column-gap: 0;
+    font-size: clamp(48px, 5.6vw, 92px);
+  }
+  .whole,
+  .dec {
+    line-height: 1;
+    font-weight: 600;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums lining-nums;
+  }
+  .whole {
+    text-align: right;
+  }
+  .dec {
+    color: var(--muted);
+  }
+  .cap {
+    padding-left: 24px;
+    font-size: 16px;
+    line-height: 1.45;
+    color: var(--muted);
+    max-width: 34ch;
+  }
+  .calc {
+    margin-top: 48px;
+    padding: 28px;
+    border-radius: var(--r);
+    background: var(--surface);
+    max-width: 460px;
+  }
+  .calc-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 18px;
+  }
+  .calc label {
+    display: block;
+    margin-bottom: 18px;
+  }
+  .calc label span {
+    display: flex;
+    justify-content: space-between;
+    font-size: 16px;
+    margin-bottom: 8px;
+  }
+  .calc output {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  input[type='range'] {
+    width: 100%;
+    height: 28px;
+    margin: 0;
+    background: transparent;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+  .meter {
+    height: 10px;
+    border-radius: 900px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .meter span {
+    display: block;
+    height: 100%;
+    width: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    transform: scaleX(0.08);
+    transition:
+      transform 0.5s var(--ease-out),
+      background-color 0.3s;
+  }
+  .meter span.over {
+    background: var(--attention);
+  }
+  .result {
+    margin-top: 14px;
+    font-size: 17px;
+  }
+  .note {
+    margin-top: 8px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  @media (max-width: 1000px) {
+    .left,
+    .figs {
+      grid-column: 1 / -1;
+    }
+    .figs {
+      order: 2;
+      margin-top: 56px;
+      gap: 28px;
+    }
+    .h2 {
+      font-size: 28px;
+    }
+    .fig {
+      grid-template-columns: 52% 2.4ch;
+      font-size: 15vw;
+    }
+    .fig .whole {
+      font-size: min(15vw, 84px);
+    }
+    .cap {
+      grid-column: 1 / -1;
+      padding: 8px 0 0;
+      font-size: 15px;
+    }
+    .calc {
+      max-width: none;
+      padding: 22px;
+    }
+  }
+  @media (max-width: 1000px) {
+    .fig {
+      font-size: min(15vw, 84px);
+    }
+  }
+</style>
+
+<script>
+  // Requests a day ≈ people × (200 for opening the app, switching channels and loading history
+  // + 3 per message sent). Deliberately on the generous side.
+  const form = document.querySelector<HTMLFormElement>('[data-calc]');
+  if (form) {
+    const fmt = new Intl.NumberFormat('en-US');
+    const people = form.elements.namedItem('people') as HTMLInputElement;
+    const msgs = form.elements.namedItem('msgs') as HTMLInputElement;
+    const meter = form.querySelector<HTMLElement>('[data-meter]')!;
+    const result = form.querySelector<HTMLElement>('[data-result]')!;
+    const update = () => {
+      const p = Number(people.value);
+      const m = Number(msgs.value);
+      form.querySelector('[data-out="people"]')!.textContent = String(p);
+      form.querySelector('[data-out="msgs"]')!.textContent = String(m);
+      const reqs = Math.round((p * (200 + 3 * m)) / 100) * 100;
+      const pct = (reqs / 100000) * 100;
+      meter.style.transform = `scaleX(${Math.min(1, pct / 100)})`;
+      meter.classList.toggle('over', pct > 100);
+      result.innerHTML =
+        pct <= 100
+          ? `About <b>${fmt.format(reqs)}</b> actions a day: <b>${pct < 1 ? '<1' : Math.round(pct)}%</b> of the free allowance.`
+          : `About <b>${fmt.format(reqs)}</b> actions a day, more than the free <b>100,000</b>. Cloudflare’s paid plan costs US$5 a month.`;
+    };
+    form.addEventListener('input', update);
+    update();
+  }
+</script>

@@ -1,0 +1,185 @@
+---
+/**
+ * How it works: four steps on a timeline (Aceternity UI), each shown with a real recording of the
+ * app. Plain words: no setting names, no jargon.
+ */
+import Timeline, { type Step } from './react/Timeline';
+
+const steps: Step[] = [
+  {
+    title: 'Press Deploy',
+    text: 'Cloudflare makes your own copy of Huddle and sets it all up for you. You type your email address and make up a setup key, a long password that only you know.',
+    checklist: ['Your own copy of Huddle', 'A place for your messages', 'Private storage for files', 'Email and phone alerts'],
+  },
+  {
+    title: 'Sign in as the owner',
+    text: 'Open your new Huddle, enter your email and setup key, and scan a code with an authenticator app on your phone. Then give your workspace a name.',
+    clip: { name: 'owner-setup', label: 'Setting up a new Huddle: the owner enters the setup key, adds an authenticator app and names the workspace' },
+  },
+  {
+    title: 'Invite your team',
+    text: 'Choose a role for each person and copy their invite link. Send it by WhatsApp, email or however you like. Each link works once.',
+    clip: { name: 'invite-someone', label: 'Inviting a teammate from Admin, People and copying their one-time invitation link' },
+  },
+  {
+    title: 'Everyone signs in',
+    text: 'People sign in with their email and the six-digit code their phone shows. No passwords to remember, none to leak.',
+    clip: { name: 'authenticator-sign-in', label: 'Signing in with an email address and the 6-digit code from an authenticator app' },
+  },
+];
+---
+
+<section class="how" id="how" aria-labelledby="how-title">
+  <div class="wrap head" data-reveal>
+    <h2 id="how-title" class="h2">Up and running in four steps</h2>
+    <p class="soft">About ten minutes from start to your first message. No coding needed.</p>
+  </div>
+  <div class="wrap">
+    <Timeline client:visible steps={steps} />
+  </div>
+</section>
+
+<style>
+  .how {
+    padding-block: var(--section) 64px;
+  }
+  .head {
+    max-width: 880px;
+  }
+  .head p {
+    margin-top: 16px;
+    font-size: 19px;
+  }
+  .how :global(.tl) {
+    position: relative;
+    margin-top: 32px;
+  }
+  .how :global(.tl-step) {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
+    gap: 40px;
+    padding-top: 120px;
+  }
+  .how :global(.tl-head) {
+    position: sticky;
+    top: calc(var(--nav-h) + 96px);
+    align-self: start;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+  }
+  .how :global(.tl-dot) {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--bg);
+    position: relative;
+    z-index: 1;
+  }
+  .how :global(.tl-dot span) {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+  .how :global(.tl-title) {
+    font-size: clamp(28px, 3.1vw, 52px);
+    line-height: 1.02;
+    letter-spacing: -0.035em;
+    font-weight: 600;
+  }
+  .how :global(.tl-title-sm) {
+    display: none;
+  }
+  .how :global(.tl-text) {
+    max-width: 52ch;
+    font-size: 19px;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+  .how :global(.tl-clip) {
+    display: block;
+    width: 100%;
+    margin-top: 28px;
+    border-radius: 14px;
+    background: var(--surface);
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+  }
+  .how :global(.tl-check) {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-top: 28px;
+  }
+  .how :global(.tl-check li) {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-height: 72px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    background: var(--surface);
+    font-size: 17px;
+    font-weight: 500;
+  }
+  .how :global(.tick) {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: var(--accent-ink);
+  }
+  .how :global(.tl-rail) {
+    position: absolute;
+    left: 19px;
+    top: 0;
+    width: 2px;
+    background: var(--surface-2);
+    overflow: hidden;
+  }
+  .how :global(.tl-fill) {
+    width: 2px;
+    background: var(--accent);
+  }
+  @media (max-width: 900px) {
+    .how :global(.tl-step) {
+      grid-template-columns: 1fr;
+      gap: 0;
+      padding-top: 64px;
+      padding-left: 56px;
+      position: relative;
+    }
+    .how :global(.tl-head) {
+      position: absolute;
+      left: 0;
+      top: 64px;
+    }
+    .how :global(.tl-head .tl-title) {
+      display: none;
+    }
+    .how :global(.tl-title-sm) {
+      display: block;
+      margin: 4px 0 12px;
+      font-size: 28px;
+    }
+    .how :global(.tl-text) {
+      font-size: 17px;
+    }
+    .how :global(.tl-check) {
+      grid-template-columns: 1fr;
+    }
+    .how :global(.tl-check li) {
+      min-height: 56px;
+    }
+    .head p {
+      font-size: 17px;
+    }
+  }
+</style>

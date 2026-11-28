@@ -10,6 +10,7 @@ export default tseslint.config(
       '.wrangler',
       'public',
       'design',
+      'site',
       'migrations',
       'worker-configuration.d.ts',
       'playwright-report',

@@ -1,0 +1,426 @@
+---
+/**
+ * What will you use it for? Six kinds of team. Choosing one shows how its Huddle would look: its
+ * channels and a conversation, rebuilt in HTML with the app's own styles.
+ */
+import Icon from './Icon.astro';
+
+type Msg = { who: string; app?: boolean; guest?: boolean; time: string; text: string; file?: string; reacts?: [string, number][]; replies?: number };
+type Use = { id: string; name: string; why: string; workspace: string; channels: { name: string; lock?: boolean; unread?: number }[]; active: string; msgs: Msg[] };
+
+const uses: Use[] = [
+  {
+    id: 'studio',
+    name: 'A design studio',
+    why: 'Share work, collect feedback in threads and invite clients as guests who only see their own channel.',
+    workspace: 'Northwind Studio',
+    channels: [{ name: 'design' }, { name: 'client-harbour' }, { name: 'leadership', lock: true }, { name: 'random', unread: 3 }],
+    active: 'client-harbour',
+    msgs: [
+      { who: 'Samuel Mensah', time: '10:12 AM', text: 'Final logo files are up. <span class="mention">@Elena</span> one round of comments here and we’ll lock it.', file: 'Harbour-logo-final.pdf' },
+      { who: 'Elena Petrova', guest: true, time: '10:31 AM', text: 'Love it. Tiny one: can the wordmark be a touch bigger on the cards?', reacts: [['👍', 2]] },
+    ],
+  },
+  {
+    id: 'club',
+    name: 'A sports club',
+    why: 'Organise fixtures, see who’s coming with one tap on a reaction, and keep committee talk private.',
+    workspace: 'Riverside FC',
+    channels: [{ name: 'match-day' }, { name: 'training' }, { name: 'committee', lock: true }, { name: 'kit-and-fees', unread: 1 }],
+    active: 'match-day',
+    msgs: [
+      { who: 'Thabo Nkosi', time: '6:40 PM', text: 'Pitch is booked for Saturday 9:00. React ✅ if you can play, ❌ if you can’t.', reacts: [['✅', 11], ['❌', 2]] },
+      { who: 'Ana Ferreira', time: '6:52 PM', text: 'Bring both kits, rain is forecast. Lifts leave the clubhouse at 8:15.', reacts: [['🙌', 4]] },
+    ],
+  },
+  {
+    id: 'school',
+    name: 'A class or school',
+    why: 'One place for notices, homework questions and files. Parents can join as guests without sharing phone numbers.',
+    workspace: 'Grade 10 Science',
+    channels: [{ name: 'announcements' }, { name: 'homework-help', unread: 5 }, { name: 'parents' }, { name: 'teachers', lock: true }],
+    active: 'homework-help',
+    msgs: [
+      { who: 'Ms Dlamini', time: '2:05 PM', text: 'Lab reports are due on Friday. The template is attached, please use the same headings.', file: 'Lab-report-template.pdf' },
+      { who: 'Lerato Mokoena', time: '2:19 PM', text: 'Should the graph be drawn by hand or can we print it?', replies: 3 },
+    ],
+  },
+  {
+    id: 'shop',
+    name: 'A small business',
+    why: 'Shifts, orders and supplier chats in one place, instead of mixing work into everyone’s personal WhatsApp.',
+    workspace: 'Corner Bakery',
+    channels: [{ name: 'orders', unread: 2 }, { name: 'shifts' }, { name: 'suppliers' }, { name: 'owners', lock: true }],
+    active: 'orders',
+    msgs: [
+      { who: 'Nomsa Khumalo', time: '4:10 PM', text: 'Big order for Saturday: 40 croissants and 12 sourdough loaves. Who can start at 5?' },
+      { who: 'Sipho Ndlovu', time: '4:14 PM', text: 'Me. I’ll open up and get the first batch in.', reacts: [['🙏', 3]] },
+    ],
+  },
+  {
+    id: 'charity',
+    name: 'A charity or community',
+    why: 'Coordinate volunteers and keep a record of what was decided, without spending anything from your budget.',
+    workspace: 'Harbour Food Bank',
+    channels: [{ name: 'volunteers', unread: 6 }, { name: 'donations' }, { name: 'events' }, { name: 'board', lock: true }],
+    active: 'volunteers',
+    msgs: [
+      { who: 'Grace Achieng', time: '9:02 AM', text: 'We need six people for Thursday’s packing day. Reply in the thread with the hours you can do.', replies: 6 },
+      { who: 'Daniel Okoro', time: '9:20 AM', text: 'The van is booked for collections on Wednesday too.', reacts: [['❤️', 5]] },
+    ],
+  },
+  {
+    id: 'eng',
+    name: 'An engineering team',
+    why: 'Let your tools post builds and alerts into channels, then talk them through in a thread right underneath.',
+    workspace: 'Northwind Studio',
+    channels: [{ name: 'engineering' }, { name: 'alerts', unread: 1 }, { name: 'deploys' }, { name: 'random' }],
+    active: 'alerts',
+    msgs: [
+      { who: 'Uptime monitor', app: true, time: '2:02 PM', text: 'The booking page is answering slowly (2.4 seconds on average since 13:58).', replies: 3 },
+      { who: 'Jonas Lindqvist', time: '2:06 PM', text: 'Looking at it. Likely the image service, rolling it back now.', reacts: [['👀', 2]] },
+    ],
+  },
+];
+---
+
+<section class="uses wrap" id="uses" aria-labelledby="uses-title" data-uses>
+  <div class="left">
+    <div data-reveal>
+      <h2 id="uses-title" class="h2">What will you use it for?</h2>
+      <p class="soft lede">Huddle works for any group that talks every day. Pick one to see how it would look.</p>
+    </div>
+    <div class="tabs" role="tablist" aria-label="Kinds of team" aria-orientation="vertical" data-reveal>
+      {
+        uses.map((u, i) => (
+          <button class="tab" role="tab" type="button" id={`use-${u.id}`} aria-controls={`usepanel-${u.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} data-tab={u.id}>
+            <span class="name">{u.name}</span>
+            <span class="why">
+              <span>{u.why}</span>
+            </span>
+          </button>
+        ))
+      }
+    </div>
+  </div>
+
+  <div class="right" data-reveal>
+    {
+      uses.map((u, i) => (
+        <div class="panel" role="tabpanel" id={`usepanel-${u.id}`} aria-labelledby={`use-${u.id}`} hidden={i !== 0} data-panel={u.id}>
+          <p class="pwhy">{u.why}</p>
+          <div class="app" data-ui>
+            <aside class="side" aria-label={`${u.workspace} channels`}>
+              <p class="ws">{u.workspace}</p>
+              <p class="grp">Channels</p>
+              {u.channels.map((c) => (
+                <div class:list={['side-row', { active: c.name === u.active, unread: !!c.unread }]}>
+                  {c.lock ? <Icon name="lock" size={15} /> : <span class="hash">#</span>}
+                  <span>{c.name}</span>
+                  {c.unread && c.name !== u.active && <span class="badge">{c.unread}</span>}
+                </div>
+              ))}
+            </aside>
+            <div class="main">
+              <div class="ui-head">
+                <span>
+                  <span class="hash">#</span> {u.active}
+                </span>
+              </div>
+              <div class="feed">
+                {u.msgs.map((m) => (
+                  <article class="msg">
+                    <span class:list={['av', { app: m.app }]}>{m.who.charAt(0)}</span>
+                    <div class="msg-body">
+                      <header>
+                        <span class="who">{m.who}</span>
+                        {m.app && <span class="tag-app">App</span>}
+                        {m.guest && <span class="tag-app">Guest</span>}
+                        <time>{m.time}</time>
+                      </header>
+                      <p set:html={m.text} />
+                      {m.file && (
+                        <div class="file">
+                          <span class="ext">PDF</span>
+                          <span>
+                            <b>{m.file}</b>
+                            <span class="ui-meta">PDF document</span>
+                          </span>
+                        </div>
+                      )}
+                      {m.reacts && (
+                        <ul class="reacts" aria-label="Reactions">
+                          {m.reacts.map(([e, n]) => (
+                            <li>
+                              <button class="react" type="button" aria-pressed="false" data-react>
+                                <span>{e}</span>
+                                <span class="n">{n}</span>
+                              </button>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                      {m.replies && (
+                        <span class="replies">
+                          <Icon name="reply" size={14} /> {m.replies} replies
+                        </span>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+              <div class="composer">
+                <input placeholder={`Message #${u.active}`} tabindex="-1" aria-hidden="true" readonly />
+              </div>
+            </div>
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</section>
+
+<style>
+  .uses {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+    padding-block: var(--section);
+  }
+  .left {
+    grid-column: 1 / span 5;
+  }
+  .lede {
+    margin-top: 16px;
+    font-size: 19px;
+    max-width: 40ch;
+  }
+  .tabs {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .tab {
+    display: block;
+    width: 100%;
+    padding: 14px 20px;
+    border: 0;
+    border-radius: 12px;
+    background: transparent;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.25s;
+  }
+  .tab:hover,
+  .tab[aria-selected='true'] {
+    background: var(--surface);
+  }
+  .name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: var(--muted);
+    transition: color 0.25s;
+  }
+  .name::before {
+    content: '';
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--surface-2);
+    transition:
+      background-color 0.3s,
+      transform 0.3s var(--ease-out);
+  }
+  .tab[aria-selected='true'] .name {
+    color: var(--ink);
+  }
+  .tab[aria-selected='true'] .name::before {
+    background: var(--accent);
+    transform: scale(1.2);
+  }
+  .why {
+    display: grid;
+    grid-template-rows: 0fr;
+    margin-left: 22px;
+    font-size: 17px;
+    color: var(--muted);
+    overflow: hidden;
+    transition:
+      grid-template-rows 0.4s var(--ease-out),
+      margin-top 0.4s var(--ease-out);
+  }
+  .why > span {
+    min-height: 0;
+  }
+  .tab[aria-selected='true'] .why {
+    grid-template-rows: 1fr;
+    margin-top: 6px;
+  }
+  .right {
+    grid-column: 7 / span 6;
+    position: sticky;
+    top: calc(var(--nav-h) + 40px);
+    padding: 10px;
+    border-radius: 22px;
+    background: var(--stage);
+  }
+  .panel:not([hidden]) {
+    animation: in 0.5s var(--ease-out) both;
+  }
+  @keyframes in {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+  }
+  .app {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    height: 540px;
+    border-radius: 14px;
+  }
+  .side {
+    padding: 16px 0;
+    background: var(--surface);
+  }
+  .ws {
+    padding: 0 18px 14px;
+    font-size: 16px;
+    font-weight: 600;
+  }
+  .grp {
+    padding: 4px 18px 6px;
+    font-size: 13px;
+    color: var(--meta);
+  }
+  .side .hash {
+    width: 15px;
+    text-align: center;
+    color: var(--meta);
+  }
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+  .feed {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 12px;
+  }
+  .pwhy {
+    display: none;
+  }
+  .composer input {
+    width: 100%;
+    border: 0;
+    background: none;
+    padding: 14px;
+    font-size: 15px;
+    outline: none;
+  }
+  @media (max-width: 1000px) {
+    .left,
+    .right {
+      grid-column: 1 / -1;
+    }
+    .right {
+      position: static;
+      margin-top: 32px;
+      padding: 6px;
+      border-radius: 18px;
+    }
+    .tabs {
+      flex-direction: row;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 28px;
+    }
+    .tab {
+      width: auto;
+      padding: 10px 16px;
+      border-radius: 900px;
+      background: var(--surface);
+    }
+    .tab[aria-selected='true'] {
+      background: var(--accent);
+    }
+    .tab[aria-selected='true'] .name {
+      color: var(--accent-ink);
+    }
+    .tab[aria-selected='true'] .name::before {
+      background: var(--accent-ink);
+    }
+    .name {
+      font-size: 16px;
+      gap: 8px;
+    }
+    .name::before {
+      width: 7px;
+      height: 7px;
+    }
+    .why {
+      display: none;
+    }
+    .pwhy {
+      display: block;
+      padding: 14px 14px 12px;
+      font-size: 16px;
+      color: var(--ink);
+    }
+    .app {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .side {
+      display: none;
+    }
+    .feed {
+      min-height: 300px;
+    }
+    .lede {
+      font-size: 17px;
+    }
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-uses]');
+  if (root) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[data-tab]')];
+    const select = (i: number, focus = false) => {
+      tabs.forEach((t, j) => {
+        const on = i === j;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        root.querySelector<HTMLElement>(`[data-panel="${t.dataset.tab}"]`)!.hidden = !on;
+      });
+      if (focus) tabs[i]!.focus();
+    };
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => select(i));
+      t.addEventListener('keydown', (e) => {
+        const n = tabs.length;
+        if (e.key === 'ArrowDown' || e.key === 'ArrowRight') (e.preventDefault(), select((i + 1) % n, true));
+        if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') (e.preventDefault(), select((i - 1 + n) % n, true));
+      });
+    });
+    root.querySelectorAll<HTMLButtonElement>('[data-react]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const on = b.getAttribute('aria-pressed') !== 'true';
+        b.setAttribute('aria-pressed', String(on));
+        const n = b.querySelector('.n')!;
+        n.textContent = String(Number(n.textContent) + (on ? 1 : -1));
+      }),
+    );
+  }
+</script>

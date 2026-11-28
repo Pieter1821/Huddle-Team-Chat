@@ -1,0 +1,72 @@
+---
+/**
+ * A real clip of the app: a muted loop with its poster frame. It plays only while on screen and
+ * stays a still picture for people who prefer reduced motion.
+ */
+import { hasClip } from '../lib/media';
+
+interface Props {
+  name: string;
+  label: string;
+  class?: string;
+  eager?: boolean;
+}
+const { name, label, class: cls, eager = false } = Astro.props;
+const exists = hasClip(name);
+---
+
+{
+  exists ? (
+    <video
+      class={cls}
+      data-clip
+      muted
+      loop
+      playsinline
+      preload={eager ? 'auto' : 'none'}
+      poster={`/media/${name}.jpg`}
+      aria-label={label}
+    >
+      <source src={`/media/${name}.webm`} type="video/webm" />
+      <source src={`/media/${name}.mp4`} type="video/mp4" />
+    </video>
+  ) : (
+    <div class:list={['missing', cls]} role="img" aria-label={label}>
+      <span>Clip needed: {name}.mp4</span>
+    </div>
+  )
+}
+
+<style>
+  video {
+    width: 100%;
+    height: auto;
+    background: var(--surface);
+  }
+  .missing {
+    display: grid;
+    place-items: center;
+    aspect-ratio: 16 / 10;
+    background: var(--surface);
+    color: var(--meta);
+    font-size: 14px;
+  }
+</style>
+
+<script>
+  // Play clips only while they're on screen; respect reduced motion.
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const e of entries) {
+        const v = e.target as HTMLVideoElement;
+        if (e.isIntersecting && !reduced && !v.closest('[hidden]')) {
+          if (v.preload === 'none') v.preload = 'auto';
+          void v.play().catch(() => {});
+        } else v.pause();
+      }
+    },
+    { threshold: 0.35 },
+  );
+  document.querySelectorAll<HTMLVideoElement>('video[data-clip]').forEach((v) => io.observe(v));
+</script>

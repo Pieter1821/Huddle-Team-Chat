@@ -1,0 +1,139 @@
+---
+/**
+ * The hero's working fragment: a Huddle channel at true size. Visitors can react and send a
+ * message, and the channel answers the way the real one does (typing, a reaction, a reply).
+ * Without script it is a still, readable channel.
+ */
+import Icon from './Icon.astro';
+---
+
+<div class="live" data-ui data-live aria-label="A working preview of a Huddle channel">
+  <div class="ui-head">
+    <span><span class="hash">#</span> launch-q1</span>
+    <span class="count">9 members</span>
+  </div>
+  <div class="live-feed" data-feed aria-live="polite">
+    <article class="msg">
+      <span class="av" aria-hidden="true">P</span>
+      <div class="msg-body">
+        <header><span class="who">Priya Raman</span><time>9:41 AM</time></header>
+        <p>Pricing page copy is ready. <span class="mention">@Jonas</span> can you check the numbers before 11?</p>
+      </div>
+    </article>
+    <article class="msg is-hover-demo">
+      <span class="av" aria-hidden="true">J</span>
+      <div class="msg-body">
+        <header><span class="who">Jonas Lindqvist</span><time>9:43 AM</time></header>
+        <p>On it. The new build went out at 9:30 and the database updated itself, nothing to run.</p>
+        <ul class="reacts" aria-label="Reactions">
+          <li><button class="react" type="button" aria-pressed="false" data-react><span>🙌</span><span class="n">3</span></button></li>
+          <li><button class="react" type="button" aria-pressed="false" data-react><span>👀</span><span class="n">1</span></button></li>
+        </ul>
+        <button class="replies" type="button" tabindex="-1"><Icon name="reply" size={14} /> 2 replies</button>
+      </div>
+      <div class="msg-actions" aria-hidden="true">
+        <span>🙌</span><span><Icon name="smile" size={16} /></span><span><Icon name="reply" size={16} /></span>
+      </div>
+    </article>
+  </div>
+  <p class="typing" data-typing aria-hidden="true"></p>
+  <form class="composer" data-compose>
+    <label class="sr-only" for="live-input">Message #launch-q1</label>
+    <input id="live-input" autocomplete="off" maxlength="160" placeholder="Message #launch-q1" />
+    <div class="tools" aria-hidden="true">
+      <span><Icon name="bold" size={16} /></span><span><Icon name="at" size={16} /></span><span><Icon name="clip" size={16} /></span>
+      <button class="send" type="submit" tabindex="-1" aria-label="Send"><Icon name="send" size={16} /></button>
+    </div>
+  </form>
+</div>
+
+<style>
+  .live {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+  .live-feed {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    padding-bottom: 4px;
+    mask-image: linear-gradient(to bottom, transparent, #000 48px);
+  }
+</style>
+
+<script>
+  const root = document.querySelector<HTMLElement>('[data-live]');
+  if (root) {
+    const feed = root.querySelector<HTMLElement>('[data-feed]')!;
+    const typing = root.querySelector<HTMLElement>('[data-typing]')!;
+    const form = root.querySelector<HTMLFormElement>('[data-compose]')!;
+    const input = form.querySelector('input')!;
+    const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const time = () => new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!);
+    const wait = (ms: number) => new Promise((r) => setTimeout(r, reduced ? 0 : ms));
+
+    function toggle(btn: HTMLButtonElement) {
+      const on = btn.getAttribute('aria-pressed') !== 'true';
+      btn.setAttribute('aria-pressed', String(on));
+      const n = btn.querySelector('.n')!;
+      n.textContent = String(Number(n.textContent) + (on ? 1 : -1));
+    }
+    root.addEventListener('click', (e) => {
+      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('[data-react]');
+      if (btn) toggle(btn);
+    });
+
+    function post(who: string, initial: string, html: string, cls = '') {
+      const last = feed.lastElementChild as HTMLElement | null;
+      const grouped = last?.dataset.who === who;
+      const el = document.createElement('article');
+      el.className = `msg new${grouped ? ' grouped' : ''}`;
+      el.dataset.who = who;
+      el.innerHTML = grouped
+        ? `<span class="gutter"></span><div class="msg-body"><p>${html}</p></div>`
+        : `<span class="av ${cls}" aria-hidden="true">${initial}</span><div class="msg-body"><header><span class="who">${who}</span><time>${time()}</time></header><p>${html}</p></div>`;
+      feed.append(el);
+      while (feed.children.length > 6) feed.firstElementChild!.remove();
+      return el;
+    }
+    async function type(name: string, ms: number) {
+      typing.innerHTML = `<span class="dots"><i></i><i></i><i></i></span> ${name} is typing`;
+      await wait(ms);
+      typing.textContent = '';
+    }
+
+    // The channel carries on by itself once, when it is first seen.
+    let started = false;
+    new IntersectionObserver(async ([e], io) => {
+      if (!e?.isIntersecting || started) return;
+      started = true;
+      io.disconnect();
+      await wait(1400);
+      await type('Ruth', 1800);
+      post('Ruth Abebe', 'R', 'Phone screenshots are in the thread. Installing it from the browser took me ten seconds.');
+    }).observe(root);
+
+    let replied = false;
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = '';
+      const mine = post('You', 'Y', esc(text), 'you');
+      if (replied) return;
+      replied = true;
+      await wait(900);
+      const body = mine.querySelector('.msg-body')!;
+      body.insertAdjacentHTML(
+        'beforeend',
+        '<ul class="reacts new" aria-label="Reactions"><li><button class="react" type="button" aria-pressed="false" data-react><span>👋</span><span class="n">1</span></button></li></ul>',
+      );
+      await type('Priya', 1500);
+      post('Priya Raman', 'P', 'Welcome in! Standup is at 10 in <span class="mention">#general</span>.');
+    });
+  }
+</script>

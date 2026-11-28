@@ -1,0 +1,25 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Page not found · Huddle" description="This page doesn't exist.">
+  <main id="main" class="wrap nf">
+    <h1>This page wandered off.</h1>
+    <p class="soft">Try the <a class="link" href="/docs">docs</a> or go back to the <a class="link" href="/">home page</a>.</p>
+  </main>
+</Base>
+
+<style>
+  .nf {
+    min-height: 60svh;
+    padding-top: 15svh;
+  }
+  h1 {
+    font-size: var(--t-l);
+    letter-spacing: -0.03em;
+    font-weight: 600;
+  }
+  p {
+    margin-top: 16px;
+  }
+</style>

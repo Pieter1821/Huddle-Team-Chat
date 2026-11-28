@@ -1,0 +1,131 @@
+---
+/** The documentation, previewed as one narrow list: every page, grouped, with its reading time. */
+import { SECTIONS, allDocs, docHref, minutes } from '../lib/docs';
+const docs = await allDocs();
+const dot = { start: 'var(--accent)', use: 'var(--ink)', run: 'var(--attention)', inside: 'var(--bronze)' } as const;
+---
+
+<section class="docs wrap" id="docs" aria-labelledby="docs-title">
+  <div class="col">
+    <div class="intro" data-reveal>
+      <h2 id="docs-title" class="title">Read the docs</h2>
+      <p class="sub">From pressing Deploy to the API, in plain language.</p>
+    </div>
+    <div class="groups">
+    {
+      SECTIONS.map((s) => {
+        const pages = docs.filter((d) => d.data.section === s.id);
+        if (!pages.length) return null;
+        return (
+          <div class="group" data-reveal>
+            <p class="gname">{s.name}</p>
+            <ul role="list">
+              {pages.map((d) => (
+                <li>
+                  <a href={docHref(d)}>
+                    <span class="dot" style={`background:${dot[s.id]}`} aria-hidden="true" />
+                    <span class="name">{d.data.title}</span>
+                    <span class="val">{minutes(d)} min</span>
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        );
+      })
+    }
+    </div>
+  </div>
+</section>
+
+<style>
+  .docs {
+    padding-block: var(--section);
+  }
+  .col {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    column-gap: var(--gap);
+    align-items: start;
+  }
+  .intro {
+    grid-column: 1 / span 4;
+    position: sticky;
+    top: calc(var(--nav-h) + 32px);
+  }
+  .groups {
+    grid-column: 5 / span 8;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 64px;
+  }
+  .group:nth-child(-n + 2) {
+    margin-top: 0;
+  }
+  .title {
+    font-size: 28px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .sub {
+    margin-top: 6px;
+    color: var(--muted);
+  }
+  .group {
+    margin-top: 40px;
+  }
+  .gname {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  a {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 38px;
+    text-decoration: none;
+    border-radius: 4px;
+  }
+  .dot {
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    transition: transform 0.3s var(--ease-out);
+  }
+  .name {
+    flex: 1;
+    font-size: 16px;
+    transition: transform 0.3s var(--ease-out);
+  }
+  .val {
+    font-size: 14px;
+    color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  a:hover .name {
+    transform: translateX(6px);
+  }
+  a:hover .dot {
+    transform: scale(1.5);
+  }
+  a:hover .val {
+    color: var(--ink);
+  }
+  @media (max-width: 900px) {
+    .col,
+    .groups {
+      display: block;
+    }
+    .intro {
+      position: static;
+    }
+    .group:nth-child(-n + 2) {
+      margin-top: 40px;
+    }
+    a {
+      min-height: 44px;
+    }
+  }
+</style>
