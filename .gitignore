@@ -11,6 +11,11 @@ test-results/
 # no Markdown or docs in git: architecture and specs live outside the repo
 *.md
 docs/
+# except the public-facing files GitHub shows
+!README.md
+!CONTRIBUTING.md
+!.github/*.md
+!.github/ISSUE_TEMPLATE/*.md
 
 design/
 .dev.vars.*
