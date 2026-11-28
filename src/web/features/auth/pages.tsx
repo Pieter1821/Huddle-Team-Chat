@@ -10,6 +10,7 @@ import type { InvitationPreview } from '@/lib/types';
 import { AuthLayout, FormError } from './auth-layout';
 import { AuthenticatorSetup, AuthenticatorSignInForm, OwnerSetup } from './authenticator';
 import { SignInForm } from './sign-in-form';
+import { SocialSignIn } from './social-sign-in';
 
 /**
  * /signin. Two ways in: an emailed code (when Gmail is set up) or an authenticator app (always).
@@ -87,11 +88,8 @@ export function SignInPage() {
           : 'Use the 6-digit code from your authenticator app.'
       }
     >
-      {current === 'email' ? (
-        <SignInForm google={email.data.google} github={email.data.github} onSignedIn={done} />
-      ) : (
-        <AuthenticatorSignInForm onSignedIn={done} />
-      )}
+      {current === 'email' ? <SignInForm onSignedIn={done} /> : <AuthenticatorSignInForm onSignedIn={done} />}
+      <SocialSignIn google={email.data.google} github={email.data.github} />
       <div className="mt-5 flex flex-col items-start gap-2 border-t border-rule pt-4">
         {current === 'email'
           ? switcher('app', 'Use an authenticator app instead')
@@ -236,16 +234,19 @@ function InviteSignIn({
   const startWith = useMemo(() => ({ inviteToken: token }), [token]);
   if (!status.data) return null;
   if (useApp || !status.data.ready) {
-    return <AuthenticatorSetup startWith={startWith} onDone={() => onSignedIn()} />;
+    return (
+      <div>
+        <AuthenticatorSetup startWith={startWith} onDone={() => onSignedIn()} />
+        <SocialSignIn google={status.data.google} github={status.data.github} />
+      </div>
+    );
   }
   return (
     <div className="space-y-5">
-      <SignInForm
-        fixedEmail={email}
-        google={status.data.google}
-        github={status.data.github}
-        onSignedIn={onSignedIn}
-      />
+      <div>
+        <SignInForm fixedEmail={email} onSignedIn={onSignedIn} />
+        <SocialSignIn google={status.data.google} github={status.data.github} />
+      </div>
       <button
         type="button"
         className="text-sm font-medium text-action underline-offset-2 hover:underline"
