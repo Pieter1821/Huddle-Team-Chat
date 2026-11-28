@@ -17,18 +17,28 @@ const actor = (role: Role, userId = 'me'): Actor => ({
 const target = (role: Role, userId = 'them') => ({ userId, role });
 
 describe('canInvite', () => {
-  it.each<[Role, Role, boolean, boolean]>([
-    ['owner', 'admin', false, true],
-    ['owner', 'guest', false, true],
-    ['admin', 'admin', false, false],
-    ['admin', 'member', false, true],
-    ['member', 'member', true, false],
-    ['member', 'guest', false, false],
-    ['member', 'guest', true, true],
-    ['guest', 'guest', true, false],
-    ['owner', 'owner', false, false],
-  ])('%s inviting a %s (member guest invites: %s) → %s', (who, role, allowed, expected) => {
-    expect(canInvite(actor(who), role, allowed)).toBe(expected);
+  const off = { guests: false, members: false };
+  const guestsOnly = { guests: true, members: false };
+  const everyone = { guests: false, members: true };
+  it.each<[Role, Role, string, { guests: boolean; members: boolean }, boolean]>([
+    ['owner', 'admin', 'off', off, true],
+    ['owner', 'guest', 'off', off, true],
+    ['admin', 'admin', 'off', off, false],
+    ['admin', 'admin', 'everyone', everyone, false],
+    ['admin', 'member', 'off', off, true],
+    ['member', 'member', 'off', off, false],
+    ['member', 'member', 'guests only', guestsOnly, false],
+    ['member', 'member', 'everyone', everyone, true],
+    ['member', 'guest', 'off', off, false],
+    ['member', 'guest', 'guests only', guestsOnly, true],
+    ['member', 'guest', 'everyone', everyone, true],
+    ['member', 'admin', 'everyone', everyone, false],
+    ['member', 'owner', 'everyone', everyone, false],
+    ['guest', 'guest', 'everyone', everyone, false],
+    ['guest', 'member', 'everyone', everyone, false],
+    ['owner', 'owner', 'off', off, false],
+  ])('%s inviting a %s (members may invite: %s) → %s', (who, role, _label, policy, expected) => {
+    expect(canInvite(actor(who), role, policy)).toBe(expected);
   });
 });
 

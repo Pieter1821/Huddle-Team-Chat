@@ -216,6 +216,40 @@ describe('roles and invitations', () => {
     expect(ws.json.workspace.allowMemberGuestInvites).toBe(false);
   });
 
+  it('lets members invite members and guests, never admins, once the owner turns it on', async () => {
+    const owner = await setupWorkspace();
+    const general = await env.DB.prepare("SELECT id FROM conversation WHERE name='general'").first<{
+      id: string;
+    }>();
+    const member = await addMember(owner.cookie, 'jaco@example.com', 'member');
+    const asMember = (body: unknown) => api('/api/invitations', { body, cookie: member.cookie });
+    const guest = { email: 'g@example.com', role: 'guest', conversationIds: [general!.id] };
+
+    expect((await asMember({ email: 'new@example.com', role: 'member' })).status).toBe(403);
+    expect((await asMember(guest)).status).toBe(403);
+
+    // Only owners and admins can change who may invite.
+    const admin = await addMember(owner.cookie, 'aisha@example.com', 'admin');
+    const turnOn = { method: 'PATCH', body: { allowMemberInvites: true } };
+    expect((await api('/api/workspace', { ...turnOn, cookie: member.cookie })).status).toBe(403);
+    expect((await api('/api/workspace', { ...turnOn, cookie: admin.cookie })).status).toBe(200);
+
+    expect((await asMember({ email: 'new@example.com', role: 'member' })).status).toBe(201);
+    expect((await asMember(guest)).status).toBe(201);
+    expect((await asMember({ email: 'boss@example.com', role: 'admin' })).status).toBe(403);
+    expect((await asMember({ email: 'boss@example.com', role: 'owner' })).status).toBe(400);
+
+    // Turning it off again closes it, and the change is in the security log.
+    await api('/api/workspace', {
+      method: 'PATCH',
+      body: { allowMemberInvites: false },
+      cookie: owner.cookie,
+    });
+    expect((await asMember({ email: 'late@example.com', role: 'member' })).status).toBe(403);
+    const me = await api('/api/me', { cookie: member.cookie });
+    expect(me.json.workspace.allowMemberInvites).toBe(false);
+  });
+
   it('only the owner can make an admin; nobody changes their own role or makes an owner', async () => {
     const owner = await setupWorkspace();
     const admin = await addMember(owner.cookie, 'aisha@example.com', 'admin');

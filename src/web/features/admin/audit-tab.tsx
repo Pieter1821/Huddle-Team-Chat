@@ -140,6 +140,7 @@ const FIELD: Record<string, string> = {
   name: 'name',
   accent: 'colour',
   allowMemberGuestInvites: 'members invite guests',
+  allowMemberInvites: 'members invite people',
 };
 const show = (v: unknown): string => {
   if (v === null || v === undefined) return 'default';

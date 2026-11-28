@@ -16,7 +16,14 @@ export const meRoutes = new Hono<AppEnv>()
     const { actor, session, db } = c.var;
     const ws = await db.query.workspace.findFirst({
       where: eq(workspace.id, actor.workspaceId),
-      columns: { id: true, name: true, accent: true, logoFileId: true, allowMemberGuestInvites: true },
+      columns: {
+        id: true,
+        name: true,
+        accent: true,
+        logoFileId: true,
+        allowMemberGuestInvites: true,
+        allowMemberInvites: true,
+      },
     });
     const totp = await db.query.totpCredential.findFirst({
       where: eq(totpCredential.userId, actor.userId),
@@ -52,6 +59,7 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
       .object({
         name: z.string().trim().min(1).max(80).optional(),
         allowMemberGuestInvites: z.boolean().optional(),
+        allowMemberInvites: z.boolean().optional(),
         // null resets to Huddle's default teal.
         accent: accentSchema.nullable().optional(),
       })
@@ -66,11 +74,12 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
       ...(body.allowMemberGuestInvites !== undefined
         ? { allowMemberGuestInvites: body.allowMemberGuestInvites }
         : {}),
+      ...(body.allowMemberInvites !== undefined ? { allowMemberInvites: body.allowMemberInvites } : {}),
       ...(body.accent !== undefined ? { accent: body.accent } : {}),
     };
     const before = await db.query.workspace.findFirst({
       where: eq(workspace.id, actor.workspaceId),
-      columns: { name: true, accent: true, allowMemberGuestInvites: true },
+      columns: { name: true, accent: true, allowMemberGuestInvites: true, allowMemberInvites: true },
     });
     // What changed, from what to what, recorded together with the change itself.
     const changed = Object.fromEntries(
@@ -87,6 +96,7 @@ export const workspaceRoutes = new Hono<AppEnv>().patch(
         id: workspace.id,
         name: workspace.name,
         allowMemberGuestInvites: workspace.allowMemberGuestInvites,
+        allowMemberInvites: workspace.allowMemberInvites,
         accent: workspace.accent,
       }),
       auditInsert(db, {

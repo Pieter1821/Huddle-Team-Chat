@@ -26,7 +26,22 @@ export function WorkspaceTab() {
       <NameCard current={me.workspace.name} />
       <BrandCard current={me.workspace.accent ?? DEFAULT_ACCENT} />
       <LogoCard />
-      <GuestsCard current={me.workspace.allowMemberGuestInvites ?? false} />
+      <ToggleCard
+        field="allowMemberInvites"
+        current={me.workspace.allowMemberInvites ?? false}
+        title="Inviting people"
+        description="Huddle is invite-only. Choose who can send invitations."
+        label="Members can invite people"
+        hint="Members can invite other members and guests, from Invite people in the sidebar. Only owners can invite admins. Otherwise only owners and admins can invite."
+      />
+      <ToggleCard
+        field="allowMemberGuestInvites"
+        current={me.workspace.allowMemberGuestInvites ?? false}
+        title="Guests"
+        description="Guests are people from outside the team, limited to the channels they’re invited to."
+        label="Members can invite guests"
+        hint="Otherwise only owners and admins can. Not needed if members can already invite people."
+      />
     </>
   );
 }
@@ -236,7 +251,22 @@ function LogoCard() {
   );
 }
 
-function GuestsCard({ current }: { current: boolean }) {
+/** One yes/no workspace setting, saved as soon as it's ticked. */
+function ToggleCard({
+  field,
+  current,
+  title,
+  description,
+  label,
+  hint,
+}: {
+  field: 'allowMemberGuestInvites' | 'allowMemberInvites';
+  current: boolean;
+  title: string;
+  description: string;
+  label: string;
+  hint: string;
+}) {
   const refresh = useRefresh();
   const [on, setOn] = useState(current);
   const [note, setNote] = useState<Note>(null);
@@ -244,7 +274,7 @@ function GuestsCard({ current }: { current: boolean }) {
     setOn(next);
     setNote(null);
     try {
-      await api('/workspace', { method: 'PATCH', json: { allowMemberGuestInvites: next } });
+      await api('/workspace', { method: 'PATCH', json: { [field]: next } });
       await refresh();
       setNote({ ok: true, text: 'Saved' });
     } catch (err) {
@@ -253,10 +283,7 @@ function GuestsCard({ current }: { current: boolean }) {
     }
   }
   return (
-    <Card
-      title="Guests"
-      description="Guests are people from outside the team, limited to the channels they’re invited to."
-    >
+    <Card title={title} description={description}>
       <label className="flex cursor-pointer items-start gap-3">
         <input
           type="checkbox"
@@ -265,8 +292,8 @@ function GuestsCard({ current }: { current: boolean }) {
           className="mt-0.5 size-5 shrink-0 accent-[var(--color-action)]"
         />
         <span>
-          <span className="block text-[15px]">Members can invite guests</span>
-          <span className="block text-sm text-meta">Otherwise only owners and admins can.</span>
+          <span className="block text-[15px]">{label}</span>
+          <span className="block text-sm text-meta">{hint}</span>
         </span>
       </label>
       <div className="mt-3">

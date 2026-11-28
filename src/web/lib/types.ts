@@ -16,6 +16,7 @@ export type Me = {
         accent: string | null;
         logoFileId: string | null;
         allowMemberGuestInvites?: boolean;
+        allowMemberInvites?: boolean;
       }
     | undefined;
 };

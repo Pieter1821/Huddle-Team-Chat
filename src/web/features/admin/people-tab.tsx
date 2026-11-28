@@ -51,16 +51,23 @@ export function PeopleTab({ me }: { me: Me }) {
   );
 }
 
-function InviteCard({ me }: { me: Me }) {
+export function InviteCard({ me }: { me: Me }) {
   const client = useQueryClient();
   const channels = useConversations();
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState<Role>('member');
+  // What this person may invite: owners anyone, admins members and guests, members whatever the
+  // workspace allows (the server checks again on every invitation).
+  const roles: Role[] =
+    me.role === 'owner'
+      ? ['member', 'guest', 'admin']
+      : me.role === 'member' && !me.workspace?.allowMemberInvites
+        ? ['guest']
+        : ['member', 'guest'];
+  const [role, setRole] = useState<Role>(roles[0]!);
   const [guestChannels, setGuestChannels] = useState<string[]>([]);
   const [note, setNote] = useState<Note>(null);
   const [link, setLink] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const roles: Role[] = me.role === 'owner' ? ['member', 'guest', 'admin'] : ['member', 'guest'];
   const channelChoices = (channels.data ?? []).filter((c) => c.kind === 'public' || c.kind === 'private');
 
   async function invite(e: FormEvent) {
