@@ -44,6 +44,27 @@ describe('getConfig', () => {
     expect(cfg.isLocal).toBe(false);
   });
 
+  it('turns Google sign-in on only when both its settings are set', () => {
+    const both = {
+      ...baseEnv,
+      GOOGLE_CLIENT_ID: 'id.apps.googleusercontent.com',
+      GOOGLE_CLIENT_SECRET: 's3cret',
+    };
+    expect(getConfig(both).google).toEqual({
+      clientId: 'id.apps.googleusercontent.com',
+      clientSecret: 's3cret',
+    });
+    expect(getConfig({ ...baseEnv, GOOGLE_CLIENT_ID: 'id.apps.googleusercontent.com' }).google).toBeNull();
+    expect(getConfig({ ...baseEnv, GOOGLE_CLIENT_SECRET: 's3cret' }).google).toBeNull();
+  });
+
+  it('turns GitHub sign-in on only when both its settings are set', () => {
+    const both = { ...baseEnv, GITHUB_CLIENT_ID: 'Iv1.abc123', GITHUB_CLIENT_SECRET: 's3cret' };
+    expect(getConfig(both).github).toEqual({ clientId: 'Iv1.abc123', clientSecret: 's3cret' });
+    expect(getConfig({ ...baseEnv, GITHUB_CLIENT_ID: 'Iv1.abc123' }).github).toBeNull();
+    expect(getConfig(baseEnv).github).toBeNull();
+  });
+
   it('uses EMAIL_FROM when set', () => {
     const cfg = getConfig({ ...baseEnv, EMAIL_FROM: 'Brightwater <chat@brightwater.example>' });
     expect(cfg.emailFrom).toBe('Brightwater <chat@brightwater.example>');

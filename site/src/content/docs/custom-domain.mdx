@@ -1,0 +1,44 @@
+---
+title: "Use your own domain"
+description: "Move Huddle to your own web address, such as chat.example.com, and what changes for your team when you do."
+section: run
+order: 4
+---
+
+At first, Huddle's web address ends in `workers.dev`. This page shows how to move it to your own address, such as `chat.northwind.studio`, and what your team needs to do afterwards.
+
+## Before you start
+
+You need a domain name (like `northwind.studio`) that's already managed in your Cloudflare account. If your domain is with another company, add it to Cloudflare first: Cloudflare's **Add a domain** steps walk you through it. Most teams use a short sub-address such as `chat.` in front of their domain.
+
+## Step 1: connect the address to Huddle
+
+1. In Cloudflare, open **Workers & Pages** and select your Huddle.
+2. Open **Settings › Domains & Routes**.
+3. Select **Add**, choose **Custom domain** and type the address, for example `chat.northwind.studio`.
+4. Wait until it shows as active. Cloudflare sets up the address and its security certificate for you.
+
+## Step 2: tell Huddle its new address
+
+1. In the same place, open **Settings › Variables and Secrets**.
+2. Add a setting called `APP_URL` with the full new address, starting with `https://` and with no slash at the end:
+
+   ```text
+   https://chat.northwind.studio
+   ```
+
+3. Wait a minute, then open the new address.
+
+Huddle uses `APP_URL` for every link it creates: invitations, reset links, links in email summaries and webhook addresses. If you skip this step, links sent in emails keep pointing at the old address.
+
+## What changes for your team
+
+Once `APP_URL` is set, everyone should use the new address only. To keep accounts safe, the old `workers.dev` address can still be opened but won't let anyone sign in or post.
+
+- **Everyone signs in again** at the new address. Their authenticator apps keep working as before.
+- **Notifications** need switching on again on each phone and computer, in **Your settings › This device**.
+- **Installed apps** point at the old address. Remove them and [install Huddle again](/docs/install-the-app) from the new one.
+- **Invitation and reset links** sent before the move use the old address. Swap the start of the link for the new address, or send new ones.
+- **Webhook addresses** made before the move keep working while the old address is on, but update the tools that use them to the new address. Only the start of the address changes.
+
+<Callout>Tell your team the new address before you switch, so the sign-in page doesn't surprise anyone.</Callout>

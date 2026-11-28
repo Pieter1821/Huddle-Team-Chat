@@ -104,10 +104,16 @@
         "description": "Optional. The name shown on emails, e.g. `Acme Huddle <x@example.com>` (only the name is used)."
       },
       "GOOGLE_CLIENT_ID": {
-        "description": "Optional, leave empty: only for a \"Sign in with Google\" button."
+        "description": "Optional, leave empty for now: add later for a \"Continue with Google\" button (see the Sign in with Google docs page)."
+      },
+      "GITHUB_CLIENT_ID": {
+        "description": "Optional, leave empty for now: add later for a \"Continue with GitHub\" button (see the Sign in with GitHub docs page)."
+      },
+      "GITHUB_CLIENT_SECRET": {
+        "description": "Optional, leave empty for now: add later for a \"Continue with GitHub\" button (see the Sign in with GitHub docs page)."
       },
       "GOOGLE_CLIENT_SECRET": {
-        "description": "Optional, leave empty: only for a \"Sign in with Google\" button."
+        "description": "Optional, leave empty for now: add later for a \"Continue with Google\" button (see the Sign in with Google docs page)."
       },
       "DB": {
         "description": "The database for messages, people and settings."

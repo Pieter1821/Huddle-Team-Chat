@@ -1,0 +1,50 @@
+---
+title: "Sign in with Google"
+description: "Add a Continue with Google button to the sign-in page, using a free Google Cloud project you control."
+section: run
+order: 3.5
+---
+
+Sign in with Google is optional. It adds a **Continue with Google** button under the emailed code, so people who already use a Google account don't need a code or an authenticator app. Nobody is added automatically: only people who have been [invited](/docs/invite-your-team) can get in, and a Google account that wasn't invited sees a message telling them to ask an admin.
+
+You need your Huddle's web address to be final first. If you're going to use [your own web address](/docs/custom-domain), set that up before you start, because Google checks the address exactly.
+
+## Create the Google sign-in
+
+This takes about ten minutes and costs nothing. Use a Google account you're happy to own this, ideally one that isn't your personal one.
+
+1. Go to **console.cloud.google.com** and create a project named `Huddle`.
+2. Open **APIs & Services › OAuth consent screen** (it may be called **Google Auth Platform**) and choose **External**.
+3. Fill in the app name (`Huddle`), a support email and a contact email. A free Google Group works well as the support email, so your own address isn't shown to people.
+4. Under **Branding**, add your Huddle's home page, privacy page and terms page. Huddle serves these at `/privacy` and `/terms` on its own address. Add your domain under **Authorized domains**.
+5. Under **Audience**, select **Publish app**. If you leave it in testing, only people you list as test users can sign in. Huddle asks Google only for the basics (`openid`, `email` and `profile`), which need no review by Google.
+6. Open **Credentials** (or **Clients**) and create an **OAuth client ID** of type **Web application**.
+7. Under **Authorized JavaScript origins**, add your Huddle's address, for example `https://chat.example.com`.
+8. Under **Authorized redirect URIs**, add the same address followed by `/api/auth/callback/google`, for example `https://chat.example.com/api/auth/callback/google`. It must match exactly, with no slash at the end.
+9. Create it, then copy the **Client ID** and **Client secret**.
+
+## Give them to Huddle
+
+In Cloudflare, open your Huddle's **Settings** and add two secrets, using exactly these names:
+
+| Name | Value |
+| --- | --- |
+| `GOOGLE_CLIENT_ID` | The Client ID from Google |
+| `GOOGLE_CLIENT_SECRET` | The Client secret from Google |
+
+Also make sure `APP_URL` is your Huddle's address (see [settings reference](/docs/settings-reference)). Save, then reload the sign-in page. The **Continue with Google** button appears once both secrets are set.
+
+## What people see
+
+Someone you've invited selects **Continue with Google**, chooses their account and lands in Huddle. If the Google account's email isn't one that was invited, they come back to the sign-in page with a message. Deactivated people can't sign in this way either.
+
+## Turn it off
+
+Delete the two secrets and reload. The button disappears and nothing else changes. To stop it from Google's side too, delete the OAuth client in the Google Cloud project.
+
+## If the button doesn't appear or fails
+
+- **No button:** one of the two secrets is missing or misspelled. The names must be exactly `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
+- **Google says "redirect_uri_mismatch":** the redirect address in Google doesn't match your Huddle's address character for character. Check `https`, the domain and `/api/auth/callback/google`.
+- **Google says the app isn't verified, or blocks the account:** the app is still in testing. Publish it under **Audience**.
+- **"Hasn't been invited":** invite that exact email address first, then try again.

@@ -1,0 +1,75 @@
+---
+title: "Settings reference"
+description: "Every setting Huddle uses, whether you need it, what it does and an example value."
+section: run
+order: 2
+---
+
+Huddle has a short list of settings that you fill in on Cloudflare. Only two are required. This page lists every one, with an example, so you can check yours are right.
+
+## Where to change settings
+
+1. In the Cloudflare dashboard, open **Workers & Pages** and select your Huddle.
+2. Open **Settings › Variables and Secrets**.
+3. Add or change a setting. Choose **Secret** for anything private, such as passwords and the setup key: Cloudflare then hides the value.
+4. Wait a minute, then reload Huddle.
+
+Settings you add here are kept when Huddle is updated.
+
+## All the settings
+
+| Setting | Do you need it? | What it does | Example |
+| --- | --- | --- | --- |
+| `ADMIN_EMAIL` | Yes | Your email address, as the owner. Only this address can do the very first sign-in. | `maya@northwind.studio` |
+| `BETTER_AUTH_SECRET` | Yes | Your **setup key**: at least 32 random letters and numbers. It keeps sign-ins and stored secrets safe. | a long random string from a password generator |
+| `APP_URL` | Only with your own web address | Huddle's full web address, without a slash at the end. Leave it empty until you [use your own domain](/docs/custom-domain). | `https://chat.northwind.studio` |
+| `GMAIL_ADDRESS` | Only for email | The Gmail address Huddle sends email from. | `northwind.huddle@gmail.com` |
+| `GMAIL_APP_PASSWORD` | Only for email | An app password for that Gmail account. Spaces don't matter. | `abcd efgh ijkl mnop` |
+| `EMAIL_FROM` | No | The name people see on Huddle's emails. Only the name part is used. | `Northwind Huddle <x@example.com>` |
+| `GOOGLE_CLIENT_ID` | No | The Client ID from your Google Cloud project. With the secret below, it adds a "Continue with Google" button to the sign-in page. See [Sign in with Google](/docs/google-sign-in). | |
+| `GOOGLE_CLIENT_SECRET` | No | The Client secret that goes with it. Both must be set for the button to appear. | |
+| `GITHUB_CLIENT_ID` | No | The Client ID of your GitHub OAuth app. With the secret below, it adds a "Continue with GitHub" button to the sign-in page. See [Sign in with GitHub](/docs/github-sign-in). | |
+| `GITHUB_CLIENT_SECRET` | No | The client secret that goes with it. Both must be set for the button to appear. | |
+
+Email only switches on when both `GMAIL_ADDRESS` and `GMAIL_APP_PASSWORD` are filled in. See [Email](/docs/email).
+
+<Callout tone="warn">Don't change `BETTER_AUTH_SECRET` once people are using Huddle. Everyone is signed out and every authenticator app stops working. People with email can still sign in with an emailed code. The owner can get back in at `/signin?owner=recover` with the new key, then send everyone else a reset link. Everyone also has to switch notifications on again.</Callout>
+
+## If a setting is missing or wrong
+
+Huddle checks its settings every time it's opened. If a required one is missing or doesn't look right, the sign-in page says **Almost there** and names the setting to fix. It never shows the value.
+
+What Huddle checks:
+
+- `ADMIN_EMAIL` must be a real email address.
+- `BETTER_AUTH_SECRET` must be at least 32 characters long.
+- `APP_URL`, if you fill it in, must be a full address starting with `https://`.
+- `GMAIL_ADDRESS`, if you fill it in, must be a real email address.
+
+For developers, the API answers with status `503` and the code `setup_incomplete`:
+
+```json
+{
+  "error": {
+    "code": "setup_incomplete",
+    "message": "Huddle isn’t fully set up yet: check BETTER_AUTH_SECRET in Cloudflare (Workers & Pages › your Worker › Settings › Variables and Secrets).",
+    "settings": ["BETTER_AUTH_SECRET"]
+  }
+}
+```
+
+## Settings Cloudflare manages for you
+
+These connect Huddle to its storage. They're created automatically when you deploy, and you don't need to change them. Cloudflare calls them **bindings**.
+
+| Binding | What it is | Name | What it's for |
+| --- | --- | --- | --- |
+| `DB` | D1 database | `huddle` | Messages, people and settings |
+| `FILES` | R2 file storage | `huddle-files` | Shared files and the logo |
+| `NOTIFICATIONS` | Queue | `huddle-notifications` | Email summaries and phone notifications |
+| `CONVERSATION_ROOM` | Durable Object | `ConversationRoom` | Puts each conversation's messages in order and sends them out live |
+| `WORKSPACE_HUB` | Durable Object | `WorkspaceHub` | Sidebar updates and the sending limit |
+
+Huddle also has a timer that runs once an hour (`0 * * * *`) to send email summaries and tidy up.
+
+When developers run Huddle on their own computer, the same settings go in a file called `.dev.vars`. See [Local development](/docs/local-development).

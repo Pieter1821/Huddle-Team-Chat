@@ -1,0 +1,83 @@
+---
+title: "Architecture"
+description: "How a request flows through Huddle's Worker, Durable Objects, D1, R2, the queue and the hourly cron."
+section: inside
+order: 1
+---
+
+**In plain words:** Huddle is one small program running on Cloudflare, plus a database for messages, private storage for files, and a few helpers that make new messages appear instantly and send notifications. Everything is saved to the database before anyone sees it, so nothing gets lost if a connection drops.
+
+The rest of this page is for developers. It explains how the pieces fit together and what happens, step by step, when someone sends a message.
+
+## The pieces
+
+| Piece | Built with | Job |
+| --- | --- | --- |
+| Web app | React, served as static assets | Everything people see |
+| API | A Worker running Hono, under `/api` | Checks who you are and what you may do, then does it |
+| Sign-in | Better Auth, with an authenticator-app plugin and email codes | Sessions, codes, rate limits |
+| Database | D1 (SQLite) through Drizzle | The source of truth: people, conversations, messages, search index |
+| `ConversationRoom` | A Durable Object, one per channel or DM | Puts that conversation's messages in order and sends them out live |
+| `WorkspaceHub` | A Durable Object, one per workspace | Sidebar updates, who's connected, and the per-person sending limit |
+| Files | R2 | Private storage for uploads and the logo |
+| Queue | Cloudflare Queues | Email summaries and device notifications |
+| Cron | Once an hour | Schedules summaries and tidies up |
+
+Requests for the app's own files are answered directly from static assets; anything under `/api` runs the Worker. Any other path returns the app, so links like `/c/` followed by a conversation id open correctly.
+
+## A request through the Worker
+
+Every API request goes through the same steps:
+
+1. **Security headers** are added: a strict content security policy, no referrer, HSTS, and `noindex` so private data is never indexed.
+2. **The database is brought up to date** if this Worker instance hasn't checked yet (see below).
+3. **Settings are validated.** A missing or invalid one stops the request with `setup_incomplete`, naming the setting.
+4. **Same-origin check.** Any request that changes something must carry Huddle's own `Origin`. This is Huddle's protection against cross-site request forgery. Sign-in, unsubscribe links and incoming webhooks have their own checks instead.
+5. **Who you are.** The session cookie is checked, and the person must be an active member (and, for a guest, not past their end date).
+6. **What you may do.** Each route applies the rules in one place, `modules/access/access.ts`. Conversations you can't read answer `404`, never `403`, so their existence isn't revealed.
+
+## Sending a message
+
+1. The Worker checks you may post, and asks `WorkspaceHub` whether you're within the sending limit. Both happen at the same time.
+2. It hands the message to that conversation's `ConversationRoom`.
+3. The room is the only writer for its conversation. It gives the message the next sequence number, with no gaps or repeats, and writes the message, an event, its mentions and its notifications to D1 in **one batch**. They all land or none do.
+4. The room sends the event to every open WebSocket for that conversation, and tells `WorkspaceHub`, which updates everyone's sidebar badges.
+5. Device notifications for the people concerned are put on the queue. This never holds up or fails the send.
+
+The client sends its own id with each message, so a retry after a dropped connection becomes the same message, not a duplicate.
+
+### Live updates and catching up
+
+Each open conversation has a WebSocket to its room, and the app has one more to `WorkspaceHub` for the sidebar. Rooms use WebSocket hibernation, so an idle conversation costs nothing while people stay connected.
+
+When the app reconnects, it says which sequence number it last saw and the room replays everything after it. If it has missed too much, the room tells it to reload the history instead. Nothing committed can be lost in between; at worst an event arrives twice and is ignored.
+
+### The outbox
+
+Events are saved before they're sent. If a room stops between saving and sending, the event stays marked unsent, and the hourly job sends it. D1 stays the source of truth: a room only keeps the last sequence number in memory and rebuilds it after a restart.
+
+## Notifications
+
+Saving a message also saves a notification for each person it concerns: mentions, the other people in a DM, and the people in a thread. These drive the unread counts, device notifications and email summaries.
+
+- **Device notifications** go through the queue straight away. They're sent once and never retried, so a device never shows the same one twice.
+- **Email summaries** are scheduled by the hourly cron for people who have had something unread for long enough, then sent through the queue. A failed summary is retried up to three times; one that still fails is picked up again by the next hourly run, and the claim on each notification makes sure nobody gets the same summary twice.
+
+## The hourly job
+
+- Schedules email summaries.
+- Removes uploads that were never sent, after a day.
+- Deletes expired sign-in codes and old rate-limit counters.
+- Sends any events still in the outbox.
+
+## Migrations
+
+The migrations live in `migrations/` and are bundled into the Worker. The first request each Worker instance handles applies any that haven't run yet, each in one atomic batch together with its record in the `d1_migrations` table, the same table `wrangler d1 migrations apply` uses. If two instances start at once, one wins each migration and the other sees it done. This is why the Deploy button works without anyone running a migration command.
+
+## Search
+
+Messages are indexed with SQLite's full-text search (FTS5) inside D1. The permission rule is part of the search query itself, so private messages are never read on behalf of someone who can't see them.
+
+## Work done in the browser
+
+Import from Slack and export both run in the owner's browser: the browser reads the Slack zip, and builds the export zip, while the Worker serves and stores the content in small pages. Building zips in the Worker would go over the free plan's CPU time per request.

@@ -26,7 +26,8 @@ export function SignInPage() {
     params.get('next')?.startsWith('/') && !params.get('next')?.startsWith('//') ? params.get('next')! : '/';
   const email = useQuery({
     queryKey: ['email-status'],
-    queryFn: () => api<{ ready: boolean; needsSetup: boolean }>('/email/status'),
+    queryFn: () =>
+      api<{ ready: boolean; needsSetup: boolean; google: boolean; github: boolean }>('/email/status'),
   });
   const [mode, setMode] = useState<'email' | 'app' | 'owner' | null>(null);
   const done = () => void navigate(next, { replace: true });
@@ -86,7 +87,11 @@ export function SignInPage() {
           : 'Use the 6-digit code from your authenticator app.'
       }
     >
-      {current === 'email' ? <SignInForm onSignedIn={done} /> : <AuthenticatorSignInForm onSignedIn={done} />}
+      {current === 'email' ? (
+        <SignInForm google={email.data.google} github={email.data.github} onSignedIn={done} />
+      ) : (
+        <AuthenticatorSignInForm onSignedIn={done} />
+      )}
       <div className="mt-5 flex flex-col items-start gap-2 border-t border-rule pt-4">
         {current === 'email'
           ? switcher('app', 'Use an authenticator app instead')
@@ -225,7 +230,7 @@ function InviteSignIn({
 }) {
   const status = useQuery({
     queryKey: ['email-status'],
-    queryFn: () => api<{ ready: boolean }>('/email/status'),
+    queryFn: () => api<{ ready: boolean; google: boolean; github: boolean }>('/email/status'),
   });
   const [useApp, setUseApp] = useState(false);
   const startWith = useMemo(() => ({ inviteToken: token }), [token]);
@@ -235,7 +240,12 @@ function InviteSignIn({
   }
   return (
     <div className="space-y-5">
-      <SignInForm fixedEmail={email} onSignedIn={onSignedIn} />
+      <SignInForm
+        fixedEmail={email}
+        google={status.data.google}
+        github={status.data.github}
+        onSignedIn={onSignedIn}
+      />
       <button
         type="button"
         className="text-sm font-medium text-action underline-offset-2 hover:underline"

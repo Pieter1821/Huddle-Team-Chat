@@ -21,6 +21,8 @@ export default defineConfig(async () => {
             EMAIL_FROM: '',
             GOOGLE_CLIENT_ID: '',
             GOOGLE_CLIENT_SECRET: '',
+            GITHUB_CLIENT_ID: '',
+            GITHUB_CLIENT_SECRET: '',
             GMAIL_ADDRESS: '',
             GMAIL_APP_PASSWORD: '',
           },

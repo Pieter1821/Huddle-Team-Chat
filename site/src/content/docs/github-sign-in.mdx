@@ -1,0 +1,52 @@
+---
+title: "Sign in with GitHub"
+description: "Add a Continue with GitHub button to the sign-in page, using a free GitHub OAuth app you control."
+section: run
+order: 3.6
+---
+
+Sign in with GitHub is optional. It adds a **Continue with GitHub** button under the emailed code, which suits teams that already live on GitHub. Nobody is added automatically: only people who have been [invited](/docs/invite-your-team) can get in, and a GitHub account whose email wasn't invited sees a message telling them to ask an admin.
+
+Huddle matches people by email address. The GitHub account needs a **verified** email, and that is the address that has to have been invited. If someone's email is private on GitHub, that's fine: Huddle asks GitHub for their verified email directly.
+
+You need your Huddle's web address to be final first. If you're going to use [your own web address](/docs/custom-domain), set that up before you start, because GitHub checks the address exactly.
+
+## Create the GitHub OAuth app
+
+This takes about five minutes and costs nothing. You can create it under your own GitHub account, or under an organisation if the app should belong to a team.
+
+1. On GitHub, open **Settings › Developer settings › OAuth Apps** (for an organisation, open the organisation's settings first) and select **New OAuth App**.
+2. Fill in the form:
+   - **Application name:** `Huddle`, or your workspace's name. People see this when they approve the sign-in.
+   - **Homepage URL:** your Huddle's address, for example `https://chat.example.com`.
+   - **Application description:** optional.
+   - **Redirect URI:** your Huddle's address followed by `/api/auth/callback/github`, for example `https://chat.example.com/api/auth/callback/github`. It must match exactly, with no slash at the end.
+3. Leave **Allow wildcard matching** and **Enable Device Flow** off. Leave **Expire user access tokens** as it is.
+4. Select **Register application**.
+5. Copy the **Client ID**. Then select **Generate a new client secret** and copy the secret straight away, because GitHub shows it only once.
+
+## Give them to Huddle
+
+In Cloudflare, open your Huddle's **Settings** and add two secrets, using exactly these names:
+
+| Name | Value |
+| --- | --- |
+| `GITHUB_CLIENT_ID` | The Client ID from GitHub |
+| `GITHUB_CLIENT_SECRET` | The client secret from GitHub |
+
+Also make sure `APP_URL` is your Huddle's address (see [settings reference](/docs/settings-reference)). Save, then reload the sign-in page. The **Continue with GitHub** button appears once both secrets are set. It sits next to **Continue with Google** if you've set that up too.
+
+## What people see
+
+Someone you've invited selects **Continue with GitHub**, approves the sign-in on GitHub and lands in Huddle. If their GitHub account's verified email isn't one that was invited, they come back to the sign-in page with a message. Deactivated people can't sign in this way either.
+
+## Turn it off
+
+Delete the two secrets and reload. The button disappears and nothing else changes. To stop it from GitHub's side too, delete the OAuth app under **Developer settings**.
+
+## If the button doesn't appear or fails
+
+- **No button:** one of the two secrets is missing or misspelled. The names must be exactly `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
+- **GitHub says the redirect_uri is not associated with this application:** the redirect address on GitHub doesn't match your Huddle's address character for character. Check `https`, the domain and `/api/auth/callback/github`.
+- **"Didn't share a verified email address":** add and verify an email under **GitHub › Settings › Emails**, then try again.
+- **"Hasn't been invited":** invite the exact email address of the GitHub account first, then try again.

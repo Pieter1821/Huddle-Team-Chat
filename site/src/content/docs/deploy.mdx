@@ -1,0 +1,87 @@
+---
+title: "Deploy to Cloudflare"
+description: "Put Huddle on your own Cloudflare account with the Deploy button, fill in two settings and open your new workspace."
+section: start
+order: 2
+---
+
+This page shows you how to put Huddle on your own Cloudflare account with one button. "Deploying" just means setting it up and switching it on. It takes about five minutes, and you only fill in two boxes.
+
+## What you need first
+
+- **A Cloudflare account.** Sign up for free at cloudflare.com. The free plan is enough.
+- **A GitHub or GitLab account.** These are free websites that store code. Cloudflare keeps your own copy of Huddle there, so it can update it later.
+- **A payment card on your Cloudflare account.** Cloudflare asks for one before it switches on file storage. You won't be charged for normal use: storage is free up to 10 GB. In the Cloudflare dashboard, open **R2 Object Storage** (Cloudflare's name for file storage) and add your card **before** you start, or the setup stops halfway.
+- **An authenticator app on your phone**, such as Google Authenticator, Microsoft Authenticator, Authy or 1Password. It shows a new 6-digit code every 30 seconds, and you use it to sign in.
+
+## Step 1: make your setup key
+
+Huddle needs one secret phrase that only you know. It's called `BETTER_AUTH_SECRET` in the settings, and Huddle calls it your **setup key**. It must be at least 32 random letters and numbers. It keeps sign-ins safe, and it proves you're the owner the first time you sign in.
+
+The easiest way to make one is with a password manager's password generator: choose at least 32 characters, letters and numbers only. If you're comfortable with a terminal (the text window developers use), either of these works too:
+
+```bash
+npx @better-auth/cli secret
+```
+
+```bash
+openssl rand -hex 32
+```
+
+Save the setup key in your password manager now.
+
+<Callout tone="warn">Keep the setup key safe and don't change it later. Changing it signs everyone out, and everyone has to set up their authenticator app again.</Callout>
+
+## Step 2: deploy
+
+1. Open the [Deploy to Cloudflare](https://deploy.workers.cloudflare.com/?url=https://github.com/Pieter1821/Huddle-Team-Chat) page and sign in to Cloudflare.
+2. Connect your GitHub or GitLab account, and give your copy of Huddle a name (or keep the one suggested).
+3. Keep the suggested names for the database (`huddle`) and the file storage (`huddle-files`).
+4. Fill in the two required boxes:
+   - `ADMIN_EMAIL`: your own email address. This makes you the owner of the workspace.
+   - `BETTER_AUTH_SECRET`: the setup key you just made.
+5. Leave every other box empty. You can add them later if you want them: `APP_URL` is only for [your own web address](/docs/custom-domain), the Gmail boxes are only for [email](/docs/email), and the Google and GitHub boxes are only for [Sign in with Google](/docs/google-sign-in) and [Sign in with GitHub](/docs/github-sign-in).
+6. Start the deploy and wait. It usually takes two or three minutes.
+
+When it's finished, Cloudflare shows your Huddle's web address. It looks like `https://huddle.your-name.workers.dev`. Open it and carry on with [your first sign-in](/docs/first-sign-in).
+
+## What Cloudflare sets up for you
+
+You don't need to understand these, but this is what appears in your Cloudflare account:
+
+| What you'll see | Name | What it does |
+| --- | --- | --- |
+| A Worker | `huddle` | The Huddle app itself |
+| A D1 database | `huddle` | Stores messages, people and settings |
+| An R2 bucket | `huddle-files` | Stores shared files and your logo, privately |
+| A queue | `huddle-notifications` | Sends email summaries and phone notifications |
+| Durable Objects | `ConversationRoom`, `WorkspaceHub` | Make new messages appear instantly |
+| A cron trigger (a timer) | Every hour | Sends email summaries and tidies up |
+
+Huddle sets up its own database the first time it runs. There's nothing else to do.
+
+## If the page says "Almost there"
+
+Huddle checks its settings every time it's opened. If one is missing or wrong, the sign-in page says **Almost there** and tells you which one, for example `BETTER_AUTH_SECRET`.
+
+1. In Cloudflare, open **Workers & Pages**, select your Huddle, then **Settings › Variables and Secrets**.
+2. Fix the setting it named.
+3. Wait a minute, then reload Huddle.
+
+Settings you change here are kept when Huddle is updated, so you only set them once.
+
+## For developers: deploy from the command line
+
+If you'd rather use a terminal, you need Node.js 22 or later. Clone the code, deploy, then add the two settings:
+
+```bash
+git clone https://github.com/Pieter1821/Huddle-Team-Chat.git huddle
+cd huddle
+npm install
+npx wrangler login
+npm run deploy
+npx wrangler secret put ADMIN_EMAIL
+npx wrangler secret put BETTER_AUTH_SECRET
+```
+
+`npm run deploy` builds Huddle, creates the database, file storage and queue on the first run, and updates the database. Until the two settings are added, the sign-in page says **Almost there**. Each `secret put` asks you for the value and applies it straight away.

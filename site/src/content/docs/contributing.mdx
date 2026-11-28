@@ -1,0 +1,67 @@
+---
+title: "Contributing"
+description: "How to propose a change to Huddle: branches, commit messages, the checks to run and what CI does."
+section: inside
+order: 5
+---
+
+**In plain words:** Huddle is free and open source, so anyone can suggest improvements. The easiest way to help is to [report a problem or suggest an idea](https://github.com/Pieter1821/Huddle-Team-Chat/issues) on GitHub; you don't need to write code to do that.
+
+The rest of this page is for developers. It explains how to prepare a code change so it's easy to review.
+
+## Before you start
+
+For anything bigger than a small fix, open an issue on [GitHub](https://github.com/Pieter1821/Huddle-Team-Chat/issues) first to talk it through. Huddle aims to stay small, to fit Cloudflare's free plan and to need no extra services, so some ideas may not fit.
+
+Set up your computer with [Local development](/docs/local-development).
+
+## Branches
+
+Work on a short-lived branch from `main`:
+
+- `feat/` for a new feature, for example `feat/pinned-messages`
+- `fix/` for a bug fix, for example `fix/unread-count-after-edit`
+
+Keep each branch to one change.
+
+## Commit messages
+
+Use [Conventional Commits](https://www.conventionalcommits.org/): a type, an optional area, and a short summary of what changed for the people using Huddle.
+
+```text
+feat(search): filter results by channel
+fix(push): stop repeating a notification after a retry
+docs(site): explain custom domains
+```
+
+Common types are `feat`, `fix`, `docs`, `test`, `refactor` and `chore`.
+
+## Before you open a pull request
+
+Run the full check, which is what CI runs:
+
+```bash
+npm run check
+```
+
+It checks formatting, lint, types, that the schema and migrations agree, runs the tests and makes a production build. If you changed anything people see, also run the end-to-end tests:
+
+```bash
+npm run test:e2e
+```
+
+## What CI checks
+
+Every pull request runs two jobs on GitHub Actions:
+
+1. **Check**: formatting, lint, that the generated Worker types are current, types, that the schema and migrations agree, that the migrations apply cleanly, the tests, a production build and a dependency audit.
+2. **End-to-end**: the Playwright tests in a real browser.
+
+## Guidelines
+
+- **Permissions on the server.** Every rule about who can do what belongs in the Worker, in `modules/access/access.ts` where possible. Hiding a button in the app is never enough.
+- **Respect the free plan.** Think about how many database rows a change reads and writes, and how many requests it adds.
+- **Database changes need a migration**, generated with `npm run db:generate`. Never edit a migration that has been released.
+- **Accessible by default.** Everything must work with a keyboard and a screen reader; the accessibility tests check every screen.
+- **Plain words.** Messages in the app say what happened and what to do next, without jargon.
+- **Tests with the change.** New behaviour comes with tests that show it works.

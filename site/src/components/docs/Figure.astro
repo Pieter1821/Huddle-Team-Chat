@@ -1,0 +1,15 @@
+---
+/** A screenshot in the docs, by capture name, with its caption. */
+import Shot from '../Shot.astro';
+interface Props {
+  name: string;
+  caption?: string;
+  alt?: string;
+}
+const { name, caption, alt } = Astro.props;
+---
+
+<figure class="doc-fig" data-zoom>
+  <Shot name={name} alt={alt ?? caption ?? ''} sizes="(max-width: 900px) 100vw, 760px" />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

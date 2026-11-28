@@ -19,6 +19,12 @@ GMAIL_ADDRESS=
 GMAIL_APP_PASSWORD=
 
 
-# Optional: "Sign in with Google".
+# Optional: "Continue with Google" on the sign-in page. Both are needed. In your Google Cloud OAuth client,
+# set the redirect URI to <APP_URL>/api/auth/callback/google (see the Sign in with Google docs page).
 GOOGLE_CLIENT_ID=
 GOOGLE_CLIENT_SECRET=
+
+# Optional: "Continue with GitHub" on the sign-in page. Both are needed. In your GitHub OAuth app,
+# set the callback URL to <APP_URL>/api/auth/callback/github (see the Sign in with GitHub docs page).
+GITHUB_CLIENT_ID=
+GITHUB_CLIENT_SECRET=

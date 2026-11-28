@@ -1,0 +1,104 @@
+---
+title: "Troubleshooting"
+description: "What to do when something goes wrong: the messages you might see while setting up, signing in, emailing and getting notifications."
+section: run
+order: 11
+---
+
+Something not working? Find the message you're seeing, or the problem you have, below. Each one says what it means and what to do.
+
+## Setting up
+
+### The sign-in page says "Almost there"
+
+One of Huddle's settings is missing or not quite right, and the message tells you which one.
+
+1. In Cloudflare, open **Workers & Pages**, select your Huddle, then **Settings › Variables and Secrets**.
+2. Fix the setting it named. The two most common mistakes are a `BETTER_AUTH_SECRET` (setup key) shorter than 32 characters, and a typo in `ADMIN_EMAIL`.
+3. Wait a minute and reload.
+
+The [settings reference](/docs/settings-reference) shows what each setting should look like.
+
+### "Huddle couldn’t set up its database"
+
+Huddle couldn't reach its database. In Cloudflare, open your Huddle, then **Settings › Bindings**, and check there's a D1 database connected with the name `DB`. Reload once it's there: Huddle tries again by itself.
+
+### The setup stops at file storage
+
+Cloudflare needs a payment card before it switches on file storage (called R2). Open **R2 Object Storage** in the Cloudflare dashboard, add a card and switch R2 on, then run the setup again. You won't be charged for normal use: storage is free up to 10 GB.
+
+### "That setup key and email don’t match this Huddle"
+
+For the owner's first sign-in, both boxes must match what was entered when Huddle was set up:
+
+- **Your email** must be the `ADMIN_EMAIL` setting. Capital letters don't matter.
+- **Setup key** must be the whole `BETTER_AUTH_SECRET`. Copy and paste it rather than typing it.
+
+## Signing in
+
+### "That code didn’t match" or "That email and code don’t match"
+
+- Type the newest code your authenticator app shows for Huddle, before it changes.
+- Check your phone's clock is set automatically (in your phone's date and time settings).
+- If your app has more than one Huddle in it, make sure you're using the right one.
+
+After 8 wrong codes in a row, signing in with the app is paused for 15 minutes.
+
+### "This setup expired. Start again."
+
+Setting up an authenticator app has to be finished within 15 minutes. Reload the page and scan the new QR code.
+
+### Someone lost their phone
+
+An owner or admin opens **Admin › People**, selects **Reset app** next to the person's name, and sends them the link. If the owner lost their phone, they go to `/signin?owner=recover` on the Huddle address and use the setup key. See [Signing in](/docs/signing-in#if-you-lose-your-phone).
+
+### "This email has not been invited to this workspace"
+
+Huddle is invite-only. Ask an owner or admin to [invite](/docs/invite-your-team) that exact email address.
+
+### "This account has been deactivated" or "Your guest access has ended"
+
+An admin switched the account off, or a guest's access date has passed. An owner or admin can switch it back on with **Reactivate** in **Admin › People**.
+
+### "Cross-site requests are not allowed"
+
+You're probably using an old address for Huddle. This happens after moving to [your own domain](/docs/custom-domain): the old `workers.dev` address no longer lets anyone sign in or post. Open Huddle at its new address.
+
+## Email
+
+### Emails don't arrive, or land in spam
+
+- Look in the spam or junk folder, and mark Huddle's email as "not spam".
+- In **Admin › Email**, select **Send me a test email**. If it fails, the message says why.
+- Check that 2-Step Verification is still on for the Gmail account. Switching it off deletes the app password Huddle uses.
+- If **Admin › Usage** shows today's emails are used up, summaries wait until tomorrow. Sign-in codes and invitations still go out.
+
+### "Email is not set up for this workspace yet"
+
+Huddle doesn't have a Gmail account to send from. Follow the steps in [Email](/docs/email), or sign in with an authenticator app instead.
+
+## Notifications
+
+### Notifications don't appear
+
+1. In **Your settings › This device**, check **Notifications on this device** is on, then select **Send a test notification**.
+2. On iPhone and iPad, open Huddle from its icon on your Home Screen. Notifications don't work in Safari itself.
+3. If your browser blocked notifications, allow them in the site settings (the icon to the left of the web address), then reload.
+4. Check you haven't paused notifications in **Your settings**, and that the conversation isn't set to **Muted**.
+5. Check your phone or computer allows notifications from your browser or the Huddle app.
+
+If the test says the browser turned notifications off, switch them on again.
+
+## Everyday use
+
+### "You’re sending messages very quickly"
+
+Each person can send about 60 messages a minute. Wait a moment and send again.
+
+### A channel has disappeared
+
+It may have been archived, or someone may have removed you. Private channels only show to the people in them, so ask someone inside to add you back.
+
+## Still stuck?
+
+Cloudflare keeps a record of errors. Open **Workers & Pages**, select your Huddle, then **Logs**. If a setting is the problem, the log names it (but never shows its value). You can also [open an issue on GitHub](https://github.com/Pieter1821/Huddle-Team-Chat/issues) to ask for help. Don't paste your setup key or passwords there.

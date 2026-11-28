@@ -116,6 +116,16 @@ describe('invite-only sign-in', () => {
     expect(users?.n).toBe(0);
   });
 
+  it('offers no Google or GitHub sign-in until they are set up, and refuses the route', async () => {
+    const status = await api('/api/email/status');
+    expect(status.json.google).toBe(false);
+    expect(status.json.github).toBe(false);
+    for (const provider of ['google', 'github']) {
+      const res = await api('/api/auth/sign-in/social', { body: { provider, callbackURL: '/' } });
+      expect(res.status).toBeGreaterThanOrEqual(400);
+    }
+  });
+
   it('accepts an invitation automatically on first sign-in, once only', async () => {
     const owner = await setupWorkspace();
     const member = await addMember(owner.cookie, 'jaco@example.com', 'member');
