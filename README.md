@@ -2,6 +2,8 @@
 
 Free team chat that runs on your own Cloudflare account. Channels, threads, direct messages, search and file sharing, with no per-seat fees and no one else holding your messages.
 
+No passwords: sign in with an authenticator app, an emailed code, or Google or GitHub. Huddle is invite-only, and owners choose whether members can invite people too.
+
 **Website and docs: [huddlechat.co.za](https://huddlechat.co.za)**
 
 ![A Huddle channel](site/src/assets/screens/channel-desktop.png)

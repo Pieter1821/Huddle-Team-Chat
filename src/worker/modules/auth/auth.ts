@@ -47,6 +47,8 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
     appName: 'Huddle',
     baseURL: config.appUrl,
     basePath: '/api/auth',
+    // Errors that come back from Google or GitHub land on our sign-in page, not a bare error page.
+    onAPIError: { errorURL: `${config.appUrl}/signin` },
     secret: config.authSecret,
     trustedOrigins: [config.appUrl],
     database: drizzleAdapter(db, {
@@ -169,6 +171,26 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
     hooks: {
       // Failed code or link attempts are what an owner needs to see when someone is guessing.
       after: createAuthMiddleware(async (ctx) => {
+        // Google and GitHub send people back through /callback/:provider. A failed sign-in redirects
+        // to the sign-in page with ?error=<code>; record it so an owner can see setup mistakes (a
+        // wrong client secret, a missing redirect address) without reading server logs. Invites and
+        // deactivations are already recorded on their own, and cancelling at the provider isn't a fault.
+        // (Better Auth ships two copies of its error class, so instanceof can't be trusted here: read the headers.)
+        const redirect = ctx.context.returned as { headers?: HeadersInit } | undefined;
+        if (ctx.path.startsWith('/callback/') && redirect?.headers) {
+          const location = new Headers(redirect.headers).get('location');
+          const error = location ? new URL(location, config.appUrl).searchParams.get('error') : null;
+          const ignored = ['NOT_INVITED', 'ACCOUNT_DEACTIVATED', 'access_denied'];
+          if (error && !ignored.includes(error)) {
+            const provider = new URL(ctx.request?.url ?? config.appUrl).pathname.split('/').pop();
+            await recordAudit(db, {
+              action: 'auth.sign_in_failed',
+              ipAddress: ctx.request?.headers.get('cf-connecting-ip') ?? null,
+              meta: { method: provider ?? 'oauth', error: error.slice(0, 80) },
+            });
+          }
+          return;
+        }
         const failed = ctx.context.returned instanceof APIError;
         if (
           !failed ||

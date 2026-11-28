@@ -20,7 +20,7 @@ function providerErrorMessage(code: string | null): string | null {
   if (code === 'email_not_found')
     return 'That account didn’t share a verified email address. Verify one with the provider, or use an emailed code.';
   if (code === 'access_denied') return null; // they chose not to continue
-  return 'That sign-in didn’t work. Try again, or use an emailed code.';
+  return 'That sign-in didn’t work. Try again, or use an emailed code. If it keeps happening, an admin can see why in Admin › Security log.';
 }
 
 function GitHubMark() {
