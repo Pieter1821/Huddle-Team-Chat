@@ -1,0 +1,14 @@
+---
+/** A short clip of the app in the docs, with its caption. */
+import Clip from '../Clip.astro';
+interface Props {
+  name: string;
+  caption?: string;
+}
+const { name, caption } = Astro.props;
+---
+
+<figure class="doc-fig">
+  <Clip name={name} label={caption ?? 'A short recording of Huddle'} />
+  {caption && <figcaption>{caption}</figcaption>}
+</figure>

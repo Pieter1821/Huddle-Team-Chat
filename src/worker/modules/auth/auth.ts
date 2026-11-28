@@ -61,9 +61,16 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
     }),
     // No passwords anywhere: email codes, magic links, authenticator apps and Google only.
     emailAndPassword: { enabled: false },
-    socialProviders: config.google
-      ? { google: { clientId: config.google.clientId, clientSecret: config.google.clientSecret } }
-      : {},
+    // Each button appears only when its two settings are set. Who may get in is still decided by
+    // the invitation rules below, whichever way someone signs in.
+    socialProviders: {
+      ...(config.google
+        ? { google: { clientId: config.google.clientId, clientSecret: config.google.clientSecret } }
+        : {}),
+      ...(config.github
+        ? { github: { clientId: config.github.clientId, clientSecret: config.github.clientSecret } }
+        : {}),
+    },
     session: { expiresIn: THIRTY_DAYS, updateAge: 24 * 60 * 60 },
     rateLimit: {
       enabled: true,
@@ -118,6 +125,7 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
               await recordAudit(db, { action: 'auth.sign_up_blocked', meta: { email } });
               throw new APIError('FORBIDDEN', {
                 message: 'This email has not been invited to this workspace.',
+                code: 'NOT_INVITED',
               });
             }
             return { data: { ...user, email } };
@@ -141,7 +149,10 @@ export function createAuth(config: Config, db: Db, waitUntil?: (p: Promise<unkno
             });
             if (deactivated) {
               await recordAudit(db, { action: 'auth.session_blocked', actorId: session.userId });
-              throw new APIError('FORBIDDEN', { message: 'This account has been deactivated.' });
+              throw new APIError('FORBIDDEN', {
+                message: 'This account has been deactivated.',
+                code: 'ACCOUNT_DEACTIVATED',
+              });
             }
           },
           async after(session) {

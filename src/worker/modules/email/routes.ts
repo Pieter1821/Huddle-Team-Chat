@@ -13,6 +13,9 @@ export const emailRoutes = new Hono<AppEnv>().get('/status', async (c) => {
     // Email sign-in codes can be sent (always true on this machine, where they're printed).
     ready: (await emailDeliveryConfigured(config)) || config.isLocal,
     needsSetup: !(await db.query.workspace.findFirst({ columns: { id: true } })),
+    // "Continue with Google" / "Continue with GitHub" are offered only once their settings are set.
+    google: config.google !== null,
+    github: config.github !== null,
   });
 });
 

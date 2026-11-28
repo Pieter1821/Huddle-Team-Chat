@@ -1,0 +1,128 @@
+---
+/** The docs' front page: search, then every section with its pages and what each covers. */
+import Base from '../../layouts/Base.astro';
+import Search from '../../components/docs/Search.astro';
+import { SECTIONS, allDocs, docHref, minutes } from '../../lib/docs';
+const docs = await allDocs();
+const blurb = {
+  start: 'Deploy Huddle, sign in as the owner and bring your team in.',
+  use: 'Everyday chat: channels, threads, files, search and notifications.',
+  run: 'Roles, settings, email, your own domain, imports, exports and updates.',
+  inside: 'Architecture, security, the API and working on Huddle itself.',
+} as const;
+---
+
+<Base title="Huddle docs" description="Everything about deploying, using and running Huddle, the free team chat that runs on your own Cloudflare account." active="docs">
+  <main id="main" class="docs-home wrap">
+    <div class="top" data-reveal>
+      <h1>Huddle docs</h1>
+      <p class="lead soft">From pressing Deploy to the API, in plain language.</p>
+      <div class="s"><Search /></div>
+    </div>
+    <div class="secs">
+      {
+        SECTIONS.map((s, i) => (
+          <section class:list={['sec', `c${i}`]} aria-labelledby={`sec-${s.id}`} data-reveal>
+            <h2 id={`sec-${s.id}`}>{s.name}</h2>
+            <p class="soft">{blurb[s.id]}</p>
+            <ul role="list">
+              {docs
+                .filter((d) => d.data.section === s.id)
+                .map((d) => (
+                  <li>
+                    <a href={docHref(d)}>
+                      <span>{d.data.title}</span>
+                      <span class="m">{minutes(d)} min</span>
+                    </a>
+                  </li>
+                ))}
+            </ul>
+          </section>
+        ))
+      }
+    </div>
+  </main>
+</Base>
+
+<style>
+  .docs-home {
+    padding-top: 72px;
+  }
+  .top {
+    max-width: 720px;
+  }
+  h1 {
+    font-size: var(--t-xl);
+    line-height: 0.95;
+    letter-spacing: -0.045em;
+    font-weight: 600;
+  }
+  .lead {
+    margin-top: 20px;
+  }
+  .s {
+    margin-top: 32px;
+    max-width: 480px;
+  }
+  .secs {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-top: 96px;
+  }
+  .sec {
+    padding: 28px 24px 20px;
+    border-radius: var(--r);
+    background: var(--surface);
+  }
+  .sec.c0 {
+    background: var(--stage);
+  }
+  h2 {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+  .sec > p {
+    margin-top: 8px;
+    font-size: 16px;
+    min-height: 3em;
+  }
+  ul {
+    margin-top: 20px;
+  }
+  a {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 9px 10px;
+    margin-inline: -10px;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 16px;
+    transition: background-color 0.2s;
+  }
+  a:hover {
+    background: color-mix(in srgb, var(--bg) 45%, transparent);
+  }
+  .m {
+    color: var(--muted);
+    font-size: 14px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  @media (max-width: 1100px) {
+    .secs {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+  @media (max-width: 640px) {
+    .docs-home {
+      padding-top: 40px;
+    }
+    .secs {
+      grid-template-columns: 1fr;
+      margin-top: 56px;
+    }
+  }
+</style>

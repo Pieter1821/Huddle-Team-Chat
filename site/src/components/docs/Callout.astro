@@ -1,0 +1,11 @@
+---
+/** A note set apart from the text; tone="warn" for real warnings. */
+interface Props {
+  tone?: 'note' | 'warn';
+}
+const { tone = 'note' } = Astro.props;
+---
+
+<aside class:list={['callout', tone]} role={tone === 'warn' ? 'note' : undefined}>
+  <slot />
+</aside>

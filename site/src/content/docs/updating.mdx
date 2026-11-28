@@ -1,0 +1,50 @@
+---
+title: "Update Huddle"
+description: "Get the newest version of Huddle into your own copy. Your messages, files and settings stay as they are."
+section: run
+order: 9
+---
+
+From time to time a new version of Huddle comes out with fixes and new features. This page shows how to get it, and explains that your messages, files and settings are kept safe.
+
+## How updates work
+
+When you used the Deploy button, Cloudflare saved your own copy of Huddle's code in your GitHub or GitLab account. Whenever that copy changes, Cloudflare automatically updates your Huddle.
+
+Your copy doesn't change by itself when a new version comes out. You bring the new version in, and Cloudflare does the rest.
+
+## Bring in the new version
+
+This step uses Git, a tool developers use to copy code. If you don't use it yourself, ask a developer to run these three commands for you. It takes a minute.
+
+In a copy of your code on a computer, run:
+
+```bash
+git remote add upstream https://github.com/Pieter1821/Huddle-Team-Chat.git
+git pull upstream main
+git push
+```
+
+The first line is only needed the first time. After `git push`, Cloudflare updates your Huddle two or three minutes later. You can watch it happen in Cloudflare under **Workers & Pages**, your Huddle, then **Deployments**.
+
+If you set Huddle up from the command line with `npm run deploy` instead, get the new version and run it again:
+
+```bash
+git pull
+npm install
+npm run deploy
+```
+
+## Your data is safe
+
+- **Messages, files and people** stay exactly where they are.
+- **Settings** you added in Cloudflare are kept.
+- **Database changes** happen by themselves. When a new version needs to change how data is stored, Huddle makes the change the first time it runs. You never need to do it by hand.
+
+## After an update
+
+Reload Huddle. Everyone gets the new version the next time they open or reload it, including people using the installed app. Huddle doesn't keep an old copy on phones or computers.
+
+## Check everything is working
+
+Open your Huddle address with `/api/health` on the end, for example `https://chat.example.com/api/health`. If it shows `{"status":"ok"}`, Huddle is running and can reach its database.

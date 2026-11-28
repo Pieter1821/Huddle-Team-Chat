@@ -1,0 +1,188 @@
+---
+/**
+ * Docs search, built on Pagefind's static index (made at build time, no server). Press / or
+ * Ctrl+K to jump to it; arrow keys move through the results.
+ */
+import Icon from '../Icon.astro';
+---
+
+<div class="search" data-docsearch>
+  <label class="sr-only" for="docs-q">Search the docs</label>
+  <div class="box">
+    <Icon name="search" size={16} />
+    <input id="docs-q" type="search" placeholder="Search the docs" autocomplete="off" aria-controls="docs-results" />
+    <kbd aria-hidden="true">/</kbd>
+  </div>
+  <ul id="docs-results" class="results" role="list" aria-live="polite" hidden></ul>
+</div>
+
+<style>
+  .search {
+    position: relative;
+  }
+  .box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    padding: 0 10px 0 12px;
+    border-radius: var(--r);
+    background: var(--surface);
+    color: var(--meta);
+    transition: box-shadow 0.2s;
+  }
+  .box:focus-within {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+  input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    background: none;
+    outline: none;
+    color: var(--ink);
+    font-size: 15px;
+  }
+  input::-webkit-search-cancel-button {
+    display: none;
+  }
+  kbd {
+    display: grid;
+    place-items: center;
+    min-width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--surface-2);
+    font-family: var(--font);
+    font-size: 13px;
+  }
+  .results {
+    position: absolute;
+    left: 0;
+    right: -40px;
+    top: calc(100% + 6px);
+    z-index: 70;
+    max-height: 60svh;
+    overflow-y: auto;
+    padding: 6px;
+    border-radius: var(--r);
+    background: var(--surface);
+    box-shadow:
+      inset 0 0 0 1px var(--edge),
+      0 18px 48px rgb(0 0 0 / 0.5);
+  }
+  .results :global(a) {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 4px;
+    text-decoration: none;
+    color: var(--ink);
+  }
+  .results :global(a:hover),
+  .results :global(a.active) {
+    background: var(--surface-2);
+  }
+  .results :global(b) {
+    display: block;
+    font-weight: 600;
+    font-size: 15px;
+  }
+  .results :global(span) {
+    display: block;
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .results :global(mark) {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+  .results :global(.empty) {
+    padding: 10px 12px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+  @media (max-width: 900px) {
+    .results {
+      right: 0;
+    }
+  }
+</style>
+
+<script>
+  type Hit = { url: string; meta: { title?: string }; excerpt: string };
+  type Pagefind = {
+    search: (q: string) => Promise<{ results: { data: () => Promise<Hit> }[] }>;
+  };
+  const root = document.querySelector<HTMLElement>('[data-docsearch]');
+  if (root) {
+    const input = root.querySelector('input')!;
+    const list = root.querySelector<HTMLUListElement>('ul')!;
+    let pf: Pagefind | null = null;
+    let active = -1;
+    const load = async () => {
+      if (pf) return pf;
+      try {
+        const path = '/pagefind/pagefind.js';
+        pf = (await import(/* @vite-ignore */ path)) as Pagefind;
+      } catch {
+        pf = null;
+      }
+      return pf;
+    };
+    const links = () => [...list.querySelectorAll<HTMLAnchorElement>('a')];
+    const mark = (i: number) => {
+      active = i;
+      links().forEach((a, j) => a.classList.toggle('active', j === i));
+      links()[i]?.scrollIntoView({ block: 'nearest' });
+    };
+    let seq = 0;
+    input.addEventListener('focus', () => void load());
+    input.addEventListener('input', async () => {
+      const q = input.value.trim();
+      const mine = ++seq;
+      if (!q) {
+        list.hidden = true;
+        return;
+      }
+      const engine = await load();
+      if (mine !== seq) return;
+      if (!engine) {
+        list.innerHTML = '<li class="empty">Search is available on the published site.</li>';
+        list.hidden = false;
+        return;
+      }
+      const res = await engine.search(q);
+      const hits = await Promise.all(res.results.slice(0, 8).map((r) => r.data()));
+      if (mine !== seq) return;
+      list.innerHTML = hits.length
+        ? hits
+            .map(
+              (h) =>
+                `<li><a href="${h.url.replace(/\.html$/, '')}"><b>${(h.meta.title ?? '').replace(/ · Huddle docs$/, '')}</b><span>${h.excerpt}</span></a></li>`,
+            )
+            .join('')
+        : `<li class="empty">Nothing found for “${q.replace(/[<>&]/g, '')}”.</li>`;
+      list.hidden = false;
+      mark(-1);
+    });
+    input.addEventListener('keydown', (e) => {
+      const n = links().length;
+      if (e.key === 'ArrowDown' && n) (e.preventDefault(), mark((active + 1) % n));
+      if (e.key === 'ArrowUp' && n) (e.preventDefault(), mark((active - 1 + n) % n));
+      if (e.key === 'Enter' && active >= 0) links()[active]?.click();
+      if (e.key === 'Escape') ((input.value = ''), (list.hidden = true), input.blur());
+    });
+    document.addEventListener('click', (e) => !root.contains(e.target as Node) && (list.hidden = true));
+    addEventListener('keydown', (e) => {
+      const typing = (e.target as HTMLElement).closest('input, textarea, [contenteditable]');
+      if ((e.key === '/' && !typing) || (e.key.toLowerCase() === 'k' && (e.ctrlKey || e.metaKey))) {
+        e.preventDefault();
+        if (getComputedStyle(root.closest('[data-sidebar]') ?? root).transform !== 'none' && innerWidth <= 900) {
+          document.querySelector<HTMLButtonElement>('[data-menu]')?.click();
+        }
+        input.focus();
+      }
+    });
+  }
+</script>

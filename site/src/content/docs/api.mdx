@@ -1,0 +1,222 @@
+---
+title: "API"
+description: "The REST API under /api that the Huddle app itself uses, its sign-in model, errors and every route by area."
+section: inside
+order: 3
+---
+
+**In plain words:** an API is the set of addresses the Huddle app talks to behind the scenes, for example to load messages or send one. Developers can use the same addresses to build their own tools. If you just want another tool to post messages into a channel, you don't need this page: use [incoming webhooks](/docs/webhooks) instead.
+
+The rest of this page is for developers. Everything the Huddle app does goes through a JSON API under `/api`. This page explains how it authenticates, how errors look, and lists every route. For posting into a channel from another tool, [incoming webhooks](/docs/webhooks) are the simpler choice.
+
+## How it authenticates
+
+There are no API keys. The API uses the same session cookie as the app:
+
+- **Reading** (`GET`) needs a valid session cookie.
+- **Changing anything** (`POST`, `PATCH`, `PUT`, `DELETE`) also needs an `Origin` header equal to Huddle's address. Requests without it are refused with `403`. This is the protection against cross-site request forgery.
+- Incoming webhooks and unsubscribe links are the exceptions: their secret token is the credential.
+
+Permissions are the same as in the app: you can only see and do what your role allows (see [People and roles](/docs/roles-and-permissions)).
+
+A script can sign in the way the app does, with an authenticator code, and keep the cookie:
+
+```bash
+HUDDLE=https://chat.example.com
+
+curl -c huddle.cookies -X POST "$HUDDLE/api/auth/sign-in/authenticator" \
+  -H "origin: $HUDDLE" -H "content-type: application/json" \
+  -d '{"email": "you@example.com", "code": "123456"}'
+
+curl -b huddle.cookies "$HUDDLE/api/search?q=invoice&has=file"
+```
+
+## Requests and errors
+
+Request and response bodies are JSON, except file uploads (the raw bytes) and file downloads. Errors always have the same shape:
+
+```json
+{ "error": { "code": "not_found", "message": "That conversation was not found." } }
+```
+
+| Status | Common codes |
+| --- | --- |
+| `400` | `invalid_request` (the message names the field), `invalid_name`, `not_a_channel` |
+| `401` | `unauthorized`: not signed in |
+| `403` | `forbidden`: your role doesn't allow it, or the `Origin` is missing |
+| `404` | `not_found`: also used for anything you're not allowed to see |
+| `409` | `archived`, `name_taken`, `already_member` |
+| `413` | `too_large` |
+| `429` | `rate_limited`, with a `Retry-After` header |
+| `503` | `setup_incomplete`, with the names of the settings to fix |
+
+## Routes
+
+Paths below are relative to `/api`. "Admin" means owners and admins; "Owner" means the owner only.
+
+### Public
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/health` | `{"status":"ok"}` when the database answers |
+| `GET` | `/branding` | Workspace name, colour and logo URL for the sign-in page |
+| `GET` | `/branding/logo` | The logo image |
+| `GET` | `/setup` | Whether the workspace still needs setting up |
+| `GET` | `/email/status` | Whether emailed codes can be sent |
+| `GET` | `/invitations/by-token/:token` | What an invitation link shows |
+| `GET`, `POST` | `/unsubscribe` | One-click unsubscribe from email summaries (signed link) |
+| `POST` | `/hooks/:id/:token` | Incoming webhook |
+
+### Signing in
+
+Handled by Better Auth under `/auth`. The ones the app uses:
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/auth/email-otp/send-verification-otp` | Email a sign-in code |
+| `POST` | `/auth/sign-in/email-otp` | Sign in with an emailed code |
+| `POST` | `/auth/sign-in/authenticator` | Sign in with an authenticator code |
+| `POST` | `/auth/authenticator/start` | Start setting up an authenticator app (setup key, invitation, reset link or signed in) |
+| `POST` | `/auth/authenticator/finish` | Confirm the setup with a code |
+| `POST` | `/auth/sign-out` | Sign out |
+| `POST` | `/setup` | First run: name the workspace (the `ADMIN_EMAIL` account only) |
+
+### You
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/me` | You, your role and the workspace |
+| `PATCH` | `/me` | Change your name |
+| `POST` | `/me/authenticator/remove` | Turn off your authenticator app |
+| `GET`, `PATCH` | `/me/preferences` | Email summary, wait time, time zone, pause |
+| `GET` | `/activity/mentions` | Messages that mention you, newest first |
+| `GET` | `/activity/threads` | Threads you started or replied in |
+
+### Conversations and messages
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/conversations` | Your sidebar, with unread and mention counts |
+| `GET` | `/conversations/browse` | Public channels you can join |
+| `POST` | `/conversations` | Create a channel |
+| `POST` | `/conversations/dm` | Open (or create) a DM with these people |
+| `GET` | `/conversations/:id` | A conversation and its members |
+| `PATCH` | `/conversations/:id` | Rename or change the topic |
+| `POST` | `/conversations/:id/join` | Join a public channel |
+| `POST` | `/conversations/:id/leave` | Leave a channel |
+| `POST` | `/conversations/:id/archive` | Archive a channel |
+| `POST` | `/conversations/:id/unarchive` | Restore an archived channel |
+| `POST` | `/conversations/:id/members` | Add people |
+| `DELETE` | `/conversations/:id/members/:userId` | Remove someone (Admin) |
+| `POST` | `/conversations/:id/read` | Move your read marker |
+| `PATCH` | `/conversations/:id/notifications` | Your level: `all`, `mentions` or `muted` |
+| `GET` | `/conversations/:id/messages` | History, a page at a time (`before`, `limit`) |
+| `POST` | `/conversations/:id/messages` | Send a message or a thread reply |
+| `PATCH` | `/conversations/:id/messages/:messageId` | Edit your message |
+| `DELETE` | `/conversations/:id/messages/:messageId` | Delete a message |
+| `GET` | `/conversations/:id/messages/:messageId/thread` | A thread and its replies |
+| `POST`, `DELETE` | `/conversations/:id/messages/:messageId/reactions` | Add or remove a reaction |
+| `GET` | `/conversations/:id/events` | Events after a sequence number, to catch up |
+
+To send a message, give a `body` and your own `clientMsgId` (8 to 64 letters, digits, `-` or `_`). Sending the same `clientMsgId` again returns the same message instead of a duplicate.
+
+```bash
+curl -b huddle.cookies -X POST "$HUDDLE/api/conversations/CONVERSATION_ID/messages" \
+  -H "origin: $HUDDLE" -H "content-type: application/json" \
+  -d '{"body": "Standup notes are in the doc", "clientMsgId": "script-2026-11-25-001"}'
+```
+
+Mentions are written in the body as `<@USER_ID>`, `<@channel>` or `<@here>`.
+
+### Files
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/conversations/:id/files` | Upload: raw bytes, name in the `X-File-Name` header (URL-encoded), up to 25 MB |
+| `GET` | `/conversations/:id/files` | Files shared in a conversation |
+| `GET` | `/files/:id` | Download (add `?inline=1` to view an image or PDF) |
+
+Upload first, then send a message with the file's id in `fileIds`.
+
+### Search
+
+`GET /search` with:
+
+| Parameter | Meaning |
+| --- | --- |
+| `q` | The words to find (required) |
+| `in` | Only this conversation id |
+| `from` | Only messages from this user id |
+| `has` | `file`: only messages with files |
+| `after`, `before` | Dates as `YYYY-MM-DD` |
+| `limit` | Up to 50 messages (default 20) |
+
+### Live updates
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/realtime/socket` | WebSocket for the sidebar: badge updates |
+| `GET` | `/realtime/conversations/:id/socket` | WebSocket for one conversation; `?after=` replays from a sequence number |
+
+Both need the session cookie and Huddle's own `Origin`.
+
+### Device notifications
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/push/key` | The public key browsers subscribe with |
+| `POST` | `/push/subscriptions` | Turn notifications on for this browser |
+| `POST` | `/push/subscriptions/remove` | Turn them off |
+| `POST` | `/push/test` | Send a test notification |
+
+### People and invitations
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `GET` | `/members` | People in the workspace (what you see depends on your role) |
+| `PATCH` | `/members/:userId` | Change a role, and a guest's `guestExpiresAt` (Admin) |
+| `POST` | `/members/:userId/deactivate` | Deactivate (Admin) |
+| `POST` | `/members/:userId/reactivate` | Reactivate (Admin) |
+| `POST` | `/members/:userId/authenticator-reset` | Create a reset link (Admin) |
+| `POST` | `/invitations` | Invite someone |
+| `GET` | `/invitations` | Pending invitations (Admin) |
+| `DELETE` | `/invitations/:id` | Withdraw an invitation |
+
+### Workspace and admin
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `PATCH` | `/workspace` | Name, colour, whether members can invite guests (Admin) |
+| `PUT`, `DELETE` | `/workspace/logo` | Upload or remove the logo (Admin) |
+| `POST`, `GET` | `/conversations/:id/webhooks` | Create or list a channel's webhooks (Admin) |
+| `DELETE` | `/webhooks/:id` | Revoke a webhook (Admin) |
+| `GET` | `/admin/audit` | The security log, newest first (Admin) |
+| `GET` | `/admin/usage` | Free-plan usage (Admin) |
+| `GET` | `/admin/email` | Email status (Admin) |
+| `POST` | `/admin/email/test` | Send yourself a test email (Admin) |
+
+### Import and export (Owner)
+
+| Method | Path | What it does |
+| --- | --- | --- |
+| `POST` | `/import` | Start a Slack import |
+| `GET` | `/import/:sid` | Its progress |
+| `POST` | `/import/:sid/users`, `/channels`, `/messages`, `/files` | Send the next batch |
+| `POST` | `/import/:sid/finish` | Finish it |
+| `GET` | `/export` | Workspace, people and conversations (`includeDms=1` for DMs) |
+| `GET` | `/export/conversations/:id/messages` | Every message of a conversation, 500 at a time |
+| `GET` | `/export/files/:id` | A file's bytes |
+
+## Incoming webhooks
+
+To post from another tool without signing in, create an [incoming webhook](/docs/webhooks) and call it:
+
+```bash
+curl -X POST https://chat.example.com/api/hooks/WEBHOOK_ID/SECRET_TOKEN \
+  -H "content-type: application/json" \
+  -d '{"text": "Nightly backup finished"}'
+```
+
+## Stability
+
+This is the app's own API. Routes can change between versions; check the source in `src/worker/index.ts` and `src/worker/modules` for the version you run.

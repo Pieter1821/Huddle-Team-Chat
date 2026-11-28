@@ -1,0 +1,19 @@
+---
+import { render } from 'astro:content';
+import DocsLayout from '../../layouts/DocsLayout.astro';
+import Figure from '../../components/docs/Figure.astro';
+import DocClip from '../../components/docs/DocClip.astro';
+import Callout from '../../components/docs/Callout.astro';
+import { allDocs } from '../../lib/docs';
+
+export async function getStaticPaths() {
+  const docs = await allDocs();
+  return docs.map((doc) => ({ params: { slug: doc.id }, props: { doc } }));
+}
+const { doc } = Astro.props;
+const { Content, headings } = await render(doc);
+---
+
+<DocsLayout doc={doc} headings={headings}>
+  <Content components={{ Figure, Clip: DocClip, Callout }} />
+</DocsLayout>

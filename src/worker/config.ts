@@ -17,6 +17,8 @@ const schema = z.object({
   EMAIL_FROM: optional,
   GOOGLE_CLIENT_ID: optional,
   GOOGLE_CLIENT_SECRET: optional,
+  GITHUB_CLIENT_ID: optional,
+  GITHUB_CLIENT_SECRET: optional,
   GMAIL_ADDRESS: z
     .union([z.literal(''), z.email({ message: 'GMAIL_ADDRESS must be the Gmail address to send from' })])
     .optional(),
@@ -45,6 +47,7 @@ export type Config = {
   /** Sender address for outgoing email (the delivery transport itself is chosen in lib/email.ts). */
   emailFrom: string;
   google: { clientId: string; clientSecret: string } | null;
+  github: { clientId: string; clientSecret: string } | null;
   /** Sending through Gmail with an app password (the simple way): address and password. */
   gmailAppPassword: { address: string; password: string } | null;
   /** The display name on outgoing email (the address is the Gmail account). */
@@ -74,6 +77,10 @@ export function getConfig(env: Env, origin?: string | null): Config {
     google:
       v.GOOGLE_CLIENT_ID && v.GOOGLE_CLIENT_SECRET
         ? { clientId: v.GOOGLE_CLIENT_ID, clientSecret: v.GOOGLE_CLIENT_SECRET }
+        : null,
+    github:
+      v.GITHUB_CLIENT_ID && v.GITHUB_CLIENT_SECRET
+        ? { clientId: v.GITHUB_CLIENT_ID, clientSecret: v.GITHUB_CLIENT_SECRET }
         : null,
     gmailAppPassword:
       v.GMAIL_ADDRESS && v.GMAIL_APP_PASSWORD

@@ -16,6 +16,8 @@ docs/
 !CONTRIBUTING.md
 !.github/*.md
 !.github/ISSUE_TEMPLATE/*.md
+# the website's documentation pages (the website is built from these)
+!site/src/**/docs/
 
 design/
 .dev.vars.*
