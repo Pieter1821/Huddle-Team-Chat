@@ -24,6 +24,19 @@ test('no provider buttons until Google or GitHub is set up', async ({ browser })
   await context.close();
 });
 
+test('the buttons show on the authenticator screen when email is not set up', async ({ browser }) => {
+  const { context, page } = await signedOut(browser);
+  // Like a Huddle without Gmail: the page opens on the authenticator app, not the emailed code.
+  await page.route('**/api/email/status', (route) =>
+    route.fulfill({ json: { ready: false, needsSetup: false, google: true, github: true } }),
+  );
+  await page.goto('/signin');
+  await expect(page.getByLabel('Code from your authenticator app')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue with Google' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Continue with GitHub' })).toBeVisible();
+  await context.close();
+});
+
 test('each button shows only for its own provider', async ({ browser }) => {
   const { context, page } = await signedOut(browser);
   await withProviders(page, { google: false, github: true });
