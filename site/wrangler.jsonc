@@ -3,6 +3,12 @@
   // The public website only: static files, no code, no bindings. Free on any Cloudflare plan.
   "name": "huddle-site",
   "compatibility_date": "2026-11-19",
+  // Cloudflare creates the DNS records and certificates for these on deploy. Pages carry a
+  // canonical URL on the apex, so www serving the same files does not split search ranking.
+  "routes": [
+    { "pattern": "huddlechat.co.za", "custom_domain": true },
+    { "pattern": "www.huddlechat.co.za", "custom_domain": true },
+  ],
   "assets": {
     "directory": "./dist",
     "not_found_handling": "404-page",
