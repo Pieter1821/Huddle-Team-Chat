@@ -30,7 +30,8 @@ Every person in a workspace has one of four roles. This page lists exactly what 
 | Remove people from a channel | Yes | Yes | No | No |
 | Start direct messages | Anyone | Anyone | Anyone | People they share a channel with |
 | See other people's email addresses | Yes | Yes | Yes | No |
-| Invite members and guests | Yes | Yes | No | No |
+| Invite members and guests | Yes | Yes | If turned on | No |
+| Invite guests only | Yes | Yes | If turned on | No |
 | Invite admins | Yes | No | No | No |
 | Change roles | Admins, members, guests | Members and guests | No | No |
 | Deactivate people and create reset links | Anyone but themselves | Members and guests | No | No |
@@ -43,9 +44,14 @@ A few rules hold everywhere:
 - #general can't be archived.
 - If someone isn't in a private channel, Huddle doesn't even tell them it exists.
 
-## Letting members invite guests
+## Letting members invite people
 
-In **Admin › Workspace**, under **Guests**, tick **Members can invite guests** to allow members to invite guests too. Otherwise only owners and admins can. At the moment the invite form is in **Admin**, which only owners and admins can open, so members can only use this through the [API](/docs/api) (for developers).
+By default only owners and admins can send invitations. You can open this up in **Admin › Workspace**:
+
+- **Members can invite people** lets members invite other members and guests. They find **Invite people** in the sidebar, next to the Admin button. Members can never invite admins, and only owners can: that stays with you.
+- **Members can invite guests** is the narrower option: members can invite guests only, not other members.
+
+Both are off until you turn them on, and you can turn them off again at any time. Huddle stays invite-only either way, so nobody gets in without an invitation, including when they sign in with [Google or GitHub](/docs/signing-in). Every invitation is recorded in the security log with who sent it, and a change to either setting is recorded too.
 
 ## Change someone's role
 

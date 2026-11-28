@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react';
-import { Hash, Lock, LogOut, Plus, Search, ShieldCheck } from 'lucide-react';
+import { Hash, Lock, LogOut, Plus, Search, ShieldCheck, UserPlus } from 'lucide-react';
 import { Link, NavLink, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
 import { conversationLabel, useConversations, useMe, useSignOut } from '@/lib/queries';
@@ -99,6 +99,10 @@ export function Sidebar({ className }: { className?: string }) {
           name={me.user.name}
           email={me.user.email}
           isAdmin={me.role === 'owner' || me.role === 'admin'}
+          canInvite={
+            me.role === 'member' &&
+            Boolean(me.workspace?.allowMemberInvites || me.workspace?.allowMemberGuestInvites)
+          }
         />
       )}
 
@@ -193,7 +197,17 @@ function ConversationLink({ conversation: c, label }: { conversation: SidebarCon
   );
 }
 
-function YouCard({ name, email, isAdmin }: { name: string; email: string; isAdmin: boolean }) {
+function YouCard({
+  name,
+  email,
+  isAdmin,
+  canInvite,
+}: {
+  name: string;
+  email: string;
+  isAdmin: boolean;
+  canInvite: boolean;
+}) {
   const signOut = useSignOut();
   const navigate = useNavigate();
   return (
@@ -216,6 +230,11 @@ function YouCard({ name, email, isAdmin }: { name: string; email: string; isAdmi
         </span>
         <span className="sr-only">, your settings</span>
       </Link>
+      {canInvite && (
+        <Link to="/invite" aria-label="Invite people" title="Invite people" className={iconLink}>
+          <UserPlus aria-hidden className="size-4" />
+        </Link>
+      )}
       {isAdmin && (
         <Link to="/admin" aria-label="Admin" title="Admin" className={iconLink}>
           <ShieldCheck aria-hidden className="size-4" />

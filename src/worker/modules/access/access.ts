@@ -15,16 +15,23 @@ export type Actor = {
 
 export const isAdmin = (actor: Actor) => actor.role === 'owner' || actor.role === 'admin';
 
+/** What the workspace lets members do about invitations (both off unless an owner turns them on). */
+export type MemberInvitePolicy = { guests: boolean; members: boolean };
+
 /**
  * Who may invite whom: owners invite admins, members and guests; admins invite members and guests;
- * members invite guests only when the workspace allows it; guests invite nobody. Nobody is invited
- * straight in as an owner.
+ * members invite guests when the workspace allows guest invites, and members and guests when it
+ * lets members invite people; guests invite nobody. Only an owner invites an admin, and nobody is
+ * invited straight in as an owner.
  */
-export function canInvite(actor: Actor, role: Role, memberGuestInvitesAllowed: boolean): boolean {
+export function canInvite(actor: Actor, role: Role, policy: MemberInvitePolicy): boolean {
   if (role === 'owner') return false;
   if (actor.role === 'owner') return true;
   if (actor.role === 'admin') return role !== 'admin';
-  if (actor.role === 'member') return role === 'guest' && memberGuestInvitesAllowed;
+  if (actor.role === 'member') {
+    if (role === 'guest') return policy.guests || policy.members;
+    return role === 'member' && policy.members;
+  }
   return false;
 }
 

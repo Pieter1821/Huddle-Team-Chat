@@ -132,6 +132,8 @@ export const workspace = sqliteTable(
     allowMemberGuestInvites: integer('allow_member_guest_invites', { mode: 'boolean' })
       .notNull()
       .default(false),
+    // Members may invite other members and guests (not admins). Off by default.
+    allowMemberInvites: integer('allow_member_invites', { mode: 'boolean' }).notNull().default(false),
     // The address Huddle was set up at, for work that runs without a request (hourly jobs and the
     // queue: links in emails, the push sender). APP_URL, when set, takes precedence.
     appUrl: text('app_url'),

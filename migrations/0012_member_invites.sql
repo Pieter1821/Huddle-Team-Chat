@@ -1,0 +1,1 @@
+ALTER TABLE `workspace` ADD `allow_member_invites` integer DEFAULT false NOT NULL;

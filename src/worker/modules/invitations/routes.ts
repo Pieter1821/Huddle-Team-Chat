@@ -61,7 +61,9 @@ export const invitationRoutes = new Hono<AppEnv>()
 
     const ws = await db.query.workspace.findFirst({ where: eq(workspace.id, actor.workspaceId) });
     if (!ws) throw notFound('Workspace');
-    if (!canInvite(actor, body.role, ws.allowMemberGuestInvites)) {
+    if (
+      !canInvite(actor, body.role, { guests: ws.allowMemberGuestInvites, members: ws.allowMemberInvites })
+    ) {
       throw forbidden('You cannot invite people with that role.');
     }
 

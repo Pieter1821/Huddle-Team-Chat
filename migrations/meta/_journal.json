@@ -85,6 +85,13 @@
       "when": 1795469821062,
       "tag": "0011_drop_gmail_oauth",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1795857635329,
+      "tag": "0012_member_invites",
+      "breakpoints": true
     }
   ]
 }

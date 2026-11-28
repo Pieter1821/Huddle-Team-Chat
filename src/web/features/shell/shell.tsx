@@ -14,6 +14,9 @@ const SettingsPage = lazy(() =>
   import('@/features/settings/settings-page').then((m) => ({ default: m.SettingsPage })),
 );
 const AdminPage = lazy(() => import('@/features/admin/admin-page').then((m) => ({ default: m.AdminPage })));
+const InvitePage = lazy(() =>
+  import('@/features/invite/invite-page').then((m) => ({ default: m.InvitePage })),
+);
 const ConversationView = lazy(() =>
   import('@/features/chat/conversation-view').then((m) => ({ default: m.ConversationView })),
 );
@@ -26,8 +29,9 @@ export function Shell() {
   const match = useMatch('/c/:id/*');
   const onSettings = useMatch('/settings');
   const onAdmin = useMatch('/admin/*');
+  const onInvite = useMatch('/invite');
   // On phones the main pane replaces the sidebar whenever something is open in it.
-  const inConversation = Boolean(match || onSettings || onAdmin);
+  const inConversation = Boolean(match || onSettings || onAdmin || onInvite);
   const { data: me } = useMe();
   useWorkspaceLive(me?.user.id, match?.params.id);
   const navigate = useNavigate();
@@ -35,7 +39,10 @@ export function Shell() {
     onNotificationOpen((url) => void navigate(url));
     return () => onNotificationOpen(null);
   }, [navigate]);
-  useDocumentTitle(match?.params.id, onSettings ? 'Your settings' : onAdmin ? 'Admin' : null);
+  useDocumentTitle(
+    match?.params.id,
+    onSettings ? 'Your settings' : onAdmin ? 'Admin' : onInvite ? 'Invite people' : null,
+  );
   return (
     // The app never scrolls as a whole: each panel scrolls itself. overflow-hidden also stops any
     // hidden (screen-reader-only) text placed by the browser below a panel from stretching the page.
@@ -76,6 +83,14 @@ export function Shell() {
             element={
               <Suspense fallback={null}>
                 <AdminPage />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/invite"
+            element={
+              <Suspense fallback={null}>
+                <InvitePage />
               </Suspense>
             }
           />
