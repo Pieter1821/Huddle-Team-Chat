@@ -34,6 +34,7 @@ const words = ['Your', 'team', 'chat,', 'on', 'your', 'cloud.'];
       <a class="btn btn-lg" href={DEPLOY_URL} data-magnetic>Deploy to Cloudflare <Icon name="arrow" size={18} /></a>
       <a class="btn btn-lg btn-quiet" href="#tour">See it working</a>
     </div>
+    <p class="have">Already deployed? <a class="link" href="/docs/signing-in">How to sign in</a></p>
     <ul class="facts" role="list">
       <li>Free and open source (MIT)</li>
       <li>Runs on Cloudflare’s free plan</li>
@@ -113,6 +114,11 @@ const words = ['Your', 'team', 'chat,', 'on', 'your', 'cloud.'];
     gap: 12px;
     margin-top: 36px;
     animation: rise 0.9s var(--ease-out) 0.7s both;
+  }
+  .have {
+    margin-top: 18px;
+    color: var(--muted);
+    font-size: 15px;
   }
   .facts {
     display: flex;

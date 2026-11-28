@@ -118,7 +118,17 @@ export function AuditTab() {
 function describe(e: Entry): string {
   const m = e.meta ?? {};
   const parts: string[] = [];
-  for (const key of ['email', 'address', 'role', 'from', 'to', 'name', 'channel', 'method'] as const) {
+  for (const key of [
+    'email',
+    'address',
+    'role',
+    'from',
+    'to',
+    'name',
+    'channel',
+    'method',
+    'error',
+  ] as const) {
     const v = m[key];
     if (typeof v === 'string' || typeof v === 'number')
       parts.push(key === 'channel' ? `#${v}` : `${key}: ${v}`);

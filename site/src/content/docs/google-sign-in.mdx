@@ -44,6 +44,7 @@ Delete the two secrets and reload. The button disappears and nothing else change
 
 ## If the button doesn't appear or fails
 
+- **Any failure:** a failed Google sign-in is recorded in **Admin › Security log** as "Sign-in failed", with the provider and an error code. Check there first, and send the code when asking for help.
 - **No button:** one of the two secrets is missing or misspelled. The names must be exactly `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`.
 - **Google says "redirect_uri_mismatch":** the redirect address in Google doesn't match your Huddle's address character for character. Check `https`, the domain and `/api/auth/callback/google`.
 - **Google says the app isn't verified, or blocks the account:** the app is still in testing. Publish it under **Audience**.

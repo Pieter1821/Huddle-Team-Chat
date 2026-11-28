@@ -216,6 +216,15 @@ describe('roles and invitations', () => {
     expect(ws.json.workspace.allowMemberGuestInvites).toBe(false);
   });
 
+  it('records a failed Google or GitHub sign-in in the security log, with the error code', async () => {
+    const owner = await setupWorkspace();
+    const res = await api('/api/auth/callback/github?code=abc&state=not-a-real-state');
+    expect(res.status).toBe(302);
+    const log = await api('/api/admin/audit', { cookie: owner.cookie });
+    const failed = log.json.entries.find((e: { action: string }) => e.action === 'auth.sign_in_failed');
+    expect(failed.meta).toEqual({ method: 'github', error: 'state_mismatch' });
+  });
+
   it('lets members invite members and guests, never admins, once the owner turns it on', async () => {
     const owner = await setupWorkspace();
     const general = await env.DB.prepare("SELECT id FROM conversation WHERE name='general'").first<{

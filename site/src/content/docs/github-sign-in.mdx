@@ -46,6 +46,7 @@ Delete the two secrets and reload. The button disappears and nothing else change
 
 ## If the button doesn't appear or fails
 
+- **Any failure:** a failed GitHub sign-in is recorded in **Admin › Security log** as "Sign-in failed", with the provider and an error code. Check there first, and send the code when asking for help.
 - **No button:** one of the two secrets is missing or misspelled. The names must be exactly `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET`.
 - **GitHub says the redirect_uri is not associated with this application:** the redirect address on GitHub doesn't match your Huddle's address character for character. Check `https`, the domain and `/api/auth/callback/github`.
 - **"Didn't share a verified email address":** add and verify an email under **GitHub › Settings › Emails**, then try again.
